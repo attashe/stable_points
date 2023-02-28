@@ -20,7 +20,7 @@ random.random()
 
 from enum import Enum, auto
 from functools import partial
-from sd_scripts.txt2img import SDModel, Txt2ImgInference
+from sd_scripts.inpaint_model import Inpainter
 
 
 class PredictStatus(Enum):
@@ -32,8 +32,8 @@ class PredictStatus(Enum):
 class Node(DpgNodeABC):
     _ver = '0.0.1'
 
-    node_label = 'SD text2image'
-    node_tag = 'sd_text2img'
+    node_label = 'SD image2image'
+    node_tag = 'sd_img2img'
 
     _opencv_setting_dict = None
 
@@ -291,8 +291,12 @@ class Node(DpgNodeABC):
         scale = dpg_get_value(input_value06_tag)
         
         print('**** Start generation ****')
-        image = self.inferencer.generate(
-            prompt, width, height, sampler, steps, scale)[0]
+        image = self._model_instance.inpaint(
+            Image.fromarray(image_resized),
+            Image.fromarray(inpaint_mask),
+            prompt, seed, scale, steps,
+            1, w=width, h=height)
+        
         print('**** Finish generation ****')
         
         small_window_w = self._opencv_setting_dict['process_width']
@@ -324,13 +328,13 @@ class Node(DpgNodeABC):
         tag_provider_select_value_name = tag_node_name + ':' + self.TYPE_IMAGE + ':ProviderValue'
 
         if self._sd_model is None:
-            model_path = 'G:/Weights/sd-2.0/768-v-ema.ckpt'
-            cfg_path = 'G:/GitHub/stablediffusion/configs/stable-diffusion/v2-inference-v.yaml'
-            self._sd_model = SDModel(model_path=model_path, cfg_path=cfg_path)
-            self.inferencer = Txt2ImgInference(model=self._sd_model)
+            config = 'G:/GitHub/stable-diffusion/configs/stable-diffusion/v1-inpainting-inference.yaml'
+            ckpt = 'G:/Weights/stable-diffusion/sd-v1-5-inpainting.ckpt'
+            self._model_instance = Inpainter(ckpt, config, device='cuda')
 
         if self._status == PredictStatus.PROCESS:
             image = self._generate_image()
+
             self._status = PredictStatus.READY
             self.result['depth_map'] = image
             # return image, self.result

@@ -108,6 +108,7 @@ class Node(DpgNodeABC):
         node_image_dict,
         node_result_dict,
     ):
+        print('**** Update Image node ****')
         tag_node_name = str(node_id) + ':' + self.node_tag
         output_value01_tag = tag_node_name + ':' + self.TYPE_IMAGE + ':Output01Value'
 

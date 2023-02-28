@@ -103,3 +103,17 @@ def show_info(title, message, selection_callback=on_selection):
     width = dpg.get_item_width(modal_id)
     height = dpg.get_item_height(modal_id)
     dpg.set_item_pos(modal_id, [viewport_width // 2 - width // 2, viewport_height // 2 - height // 2])
+
+
+def create_pointcloud(image):
+    h, w = image.shape[:2]
+    
+    # Change the order of the points from (y, x) to be (x, y)
+    # points = np.array(np.meshgrid(np.arange(w), np.arange(h))).swapaxes(0, 2).swapaxes(0, 1).reshape(-1, 2)
+    points = np.array(np.meshgrid(np.arange(h), np.arange(w))).swapaxes(0, 2).reshape(-1, 2)
+    points = points[:, [1, 0]]
+    z_values = np.zeros((h * w, 1))
+    points = np.concatenate((points, z_values), axis=1)
+    colors = image.reshape(-1, 3)
+    
+    return points, colors

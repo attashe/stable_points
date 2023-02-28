@@ -40,10 +40,11 @@ from render.render import Render
 # from inpaint import Inpainter, InpainterStandart
 
 from context import Context
-from utils import show_info, open_image
+from utils import show_info, open_image, create_pointcloud
 from inpaint_panel import InpaintPanelWidget
 from camera_panel import CameraPanelWidget
 from keyboard_controller import on_key_press
+from mask_processing import *
 
 
 class MaskProcessingWidget:
@@ -224,8 +225,8 @@ def restart_render():
         logger.warning("Inpainting and Rendered image is None")
         show_info('Save Error', 'Inpainting and Rendered image is None')
 
-    # init_render(str(render_save_path), str(depth_save_path))
-    update_render(str(render_save_path), str(depth_save_path))
+    init_render()
+    update_render()
     
     update_render_view()
 
@@ -234,6 +235,28 @@ def restart_render_with_current_image_callback(sender, app_data):
     restart_render()
 
 def add_textures_zeros(tag_prefix="",):
+    # Init texture data with zero values
+    Context.render_data = np.zeros((Context.image_height, Context.image_width, 3), dtype=np.float32)
+    Context.mask_data = np.zeros((Context.image_height, Context.image_width, 3), dtype=np.float32)
+    Context.inpaint_data = np.zeros((Context.image_height, Context.image_width, 3), dtype=np.float32)
+    # Init GUI textures
+    with dpg.texture_registry(show=False):
+        # Texture for rendering the point cloud
+        dpg.add_raw_texture(width=Context.image_width, height=Context.image_height,
+                            default_value=Context.render_data, format=dpg.mvFormat_Float_rgb,
+                            tag="render_tag")
+        # Texture for rendering the mask of the point cloud (selcted by depth and optionally dilated/eroded)
+        dpg.add_raw_texture(width=Context.image_width, height=Context.image_height,
+                            default_value=Context.mask_data, format=dpg.mvFormat_Float_rgb,
+                            tag="mask_tag")
+        # Texture for show inpainting results
+        dpg.add_raw_texture(width=Context.image_width, height=Context.image_height,
+                            default_value=Context.inpaint_data, format=dpg.mvFormat_Float_rgb,
+                            tag="inpaint_tag")
+        
+        # print(f'inpaint_data.shape: {Context.inpaint_data.shape}')
+        
+def add_textures(tag_prefix="",):
     # Init texture data with zero values
     Context.render_data = np.zeros((Context.image_height, Context.image_width, 3), dtype=np.float32)
     Context.mask_data = np.zeros((Context.image_height, Context.image_width, 3), dtype=np.float32)
@@ -353,11 +376,11 @@ def image_select_callback(sender, app_data, user_data):
     
     h, w = image.shape[:2]
     
-    Context.image_height = h // Context.downscale
-    Context.image_width = w // Context.downscale
+    Context.image_height = h #* Context.upscale // Context.downscale
+    Context.image_width = w #* Context.upscale // Context.downscale
     Context.init_image = image
     
-    image = upscale_image(image, Context.upscale)
+    # image = upscale_image(image, Context.upscale)
     
     update_view()
     
@@ -407,6 +430,9 @@ def main():
                     
                     dpg.add_button(label='Reset render', callback=restart_render_with_current_image_callback)
 
+    add_textures_zeros()
+    add_view_widgets()
+    
     with dpg.handler_registry():
         dpg.add_key_press_handler(callback=on_key_press)
 
