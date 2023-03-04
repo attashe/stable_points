@@ -29,6 +29,7 @@ import cv2
 import dearpygui.dearpygui as dpg
 import numpy as np
 import torch
+import torchvision
 import torch.nn.functional as F
 
 from pathlib import Path
@@ -40,11 +41,14 @@ from render.render import Render
 # from inpaint import Inpainter, InpainterStandart
 
 from context import Context
-from utils import show_info, open_image, create_pointcloud
+from utils import show_info, open_image, create_pointcloud, convert_from_uvd_numpy
 from inpaint_panel import InpaintPanelWidget
 from camera_panel import CameraPanelWidget
 from keyboard_controller import on_key_press
 from mask_processing import *
+from image_panel import ImagePanel
+from render_panel import ViewTriPanel, update_render_view, ImageWrapper
+from depth_panel import DepthPanel
 
 
 class MaskProcessingWidget:
@@ -138,10 +142,6 @@ class EditorWindow:
 def get_depth_tensor():
     pass
 
-def upscale_image(image, factor):
-    h, w = image.shape[:2]
-    image = cv2.resize(image, (w * Context.upscale, h * Context.upscale))
-    return image
 
 def init_render():
     image = Context.init_image
@@ -255,31 +255,11 @@ def add_textures_zeros(tag_prefix="",):
                             tag="inpaint_tag")
         
         # print(f'inpaint_data.shape: {Context.inpaint_data.shape}')
-        
-def add_textures(tag_prefix="",):
-    # Init texture data with zero values
-    Context.render_data = np.zeros((Context.image_height, Context.image_width, 3), dtype=np.float32)
-    Context.mask_data = np.zeros((Context.image_height, Context.image_width, 3), dtype=np.float32)
-    Context.inpaint_data = np.zeros((Context.image_height, Context.image_width, 3), dtype=np.float32)
-    # Init GUI textures
-    with dpg.texture_registry(show=False):
-        # Texture for rendering the point cloud
-        dpg.add_raw_texture(width=Context.image_width, height=Context.image_height,
-                            default_value=Context.render_data, format=dpg.mvFormat_Float_rgb,
-                            tag="render_tag")
-        # Texture for rendering the mask of the point cloud (selcted by depth and optionally dilated/eroded)
-        dpg.add_raw_texture(width=Context.image_width, height=Context.image_height,
-                            default_value=Context.mask_data, format=dpg.mvFormat_Float_rgb,
-                            tag="mask_tag")
-        # Texture for show inpainting results
-        dpg.add_raw_texture(width=Context.image_width, height=Context.image_height,
-                            default_value=Context.inpaint_data, format=dpg.mvFormat_Float_rgb,
-                            tag="inpaint_tag")
-        
-        # print(f'inpaint_data.shape: {Context.inpaint_data.shape}')
 
-def update_render_view():
-    pass
+
+def add_view_panel():
+    Context.view_panel = ViewTriPanel()
+
 
 def add_view_widgets():
     with dpg.child_window(parent='main_table_row', width=-1, height=-2, tag='render_window'):
@@ -375,6 +355,7 @@ def image_select_callback(sender, app_data, user_data):
     image = open_image(image_path)
     
     h, w = image.shape[:2]
+    logger.info(f'Initial image size is {w}x{h}px')
     
     Context.image_height = h #* Context.upscale // Context.downscale
     Context.image_width = w #* Context.upscale // Context.downscale
@@ -382,10 +363,42 @@ def image_select_callback(sender, app_data, user_data):
     
     # image = upscale_image(image, Context.upscale)
     
-    update_view()
+    # update_view()
+    # clear_textures()
+    # add_textures_zeros()
+    Context.image_wrapper = ImageWrapper(image)
+    # update_render_view()
     
-    add_textures_zeros('loaded')
-    add_view_widgets()
+    image, depth = Context.render.render()
+    
+    Context.rendered_image = image
+    Context.rendered_depth = depth
+    
+    w = Context.image_width
+    h = Context.image_height
+    
+    logger.debug(f'{w=}px, {h=}px')
+    
+    Context.view_panel.set_size(w, h)
+    
+    logger.debug(f'{Context.rendered_image.shape=}, {Context.rendered_depth.shape}')
+    depth_img = Context.image_wrapper.depth2img(Context.rendered_depth)
+    Context.view_panel.update(render=Context.rendered_image, mask=depth_img)
+    
+    # np.copyto(Context.render_data, image.astype(np.float32) / 255)
+    # np.copyto(Context.mask_data, np.zeros_like(image, dtype=np.float32))
+    # np.copyto(Context.inpaint_data, np.zeros_like(image, dtype=np.float32))
+    # add_view_widgets()
+
+
+def clear_textures():
+    logger.info('Delete old textures')
+    # dpg.delete_item('render_image', children_only=True)
+    # dpg.delete_item('render_mask', children_only=True)
+    # dpg.delete_item('render_inpaint', children_only=True)
+    dpg.delete_item('render_tag')
+    dpg.delete_item('mask_tag')
+    dpg.delete_item('inpaint_tag')
 
 
 def main():
@@ -407,13 +420,15 @@ def main():
         with dpg.table(header_row=False, tag='table'):
             dpg.add_table_column(width=300, width_fixed=True)
             dpg.add_table_column()
-            dpg.add_table_column()
-            dpg.add_table_column()
+            # dpg.add_table_column()
+            # dpg.add_table_column()
             with dpg.table_row(tag='main_table_row'):
                 with dpg.group(label="SidePanel"):
                     camera_widget = CameraPanelWidget()
                     
                     dpg.add_separator()
+                    
+                    Context.depth_panel = DepthPanel()
                     
                     sd_widget = InpaintPanelWidget()
                         
@@ -430,13 +445,14 @@ def main():
                     
                     dpg.add_button(label='Reset render', callback=restart_render_with_current_image_callback)
 
-    add_textures_zeros()
-    add_view_widgets()
+                add_textures_zeros()
+                # add_view_widgets()
+                add_view_panel()
     
     with dpg.handler_registry():
         dpg.add_key_press_handler(callback=on_key_press)
 
-    dpg.create_viewport(title='Custom Title', width=1280, height=720)
+    dpg.create_viewport(title='Pointcloud Engine', width=1280, height=720)
     dpg.setup_dearpygui()
     dpg.show_viewport()
     dpg.set_primary_window("main_window", True)

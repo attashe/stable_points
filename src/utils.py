@@ -6,6 +6,9 @@ import dearpygui.dearpygui as dpg
 
 from typing import Union
 from pathlib import Path
+from loguru import logger
+
+from context import Context
 
 
 def convert_cv_to_dpg(image, width, height):
@@ -117,3 +120,29 @@ def create_pointcloud(image):
     colors = image.reshape(-1, 3)
     
     return points, colors
+
+
+def convert_from_uvd_numpy(points, depth, focal_length):
+    # d = 1
+    focal_length = 2.0
+    
+    d = (depth[:, 0] + Context.near) * Context.depthscale
+    # d = depth[:, 0]
+    # logger.info(f'depth: min: {d.min()} max: {d.max()}')
+    cx = Context.render.camera.center[0]
+    cy = Context.render.camera.center[1]
+    x_over_z = - (cx - points[:, 0]) / (focal_length * Context.render.image_width)
+    y_over_z = - (cy - points[:, 1]) / (focal_length * Context.render.image_width)
+    logger.debug(f'cx: {cx}, cy: {cy}, focal_length: {focal_length}')
+    logger.debug(f'canvas_width: {Context.render.canvas_width}, canvas_height: {Context.render.canvas_height}')
+    logger.debug(f'x_over_z: {x_over_z.max()}, y_over_z: {y_over_z.max()}')
+    logger.debug(f'x_over_z.shape: {x_over_z.shape}, y_over_z.shape: {y_over_z.shape}, d: {d}')
+    # stop
+    z = d / np.sqrt(1. + x_over_z*x_over_z + y_over_z*y_over_z)
+    x = x_over_z * z
+    y = y_over_z * z
+    
+    z = z #* Context.render.image_height / 2
+    
+    points = np.stack((x, y, z), axis=1)
+    return points

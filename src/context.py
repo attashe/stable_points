@@ -33,12 +33,14 @@ class Context:
     use_inpaint_model = True
     
     ## Depth models settings
+    depth_type = 'midas'  # Default depth model type 'midas' | 'adabins' | 'leres'
+    depth_model = None
     adabins_weights = "weights/adabit.pth"
     midas_weights = "weights/mida.pth"
-    near = 0.1
+    depthscale = 15.0  # 3.0, 15.0
+    near = 15.0
     far = 100.0
     rescale_depth = True
-    depthscale = 3.0
     perspective_func = 'l1'  # 'l1' or 'l2'
     
     ## Camera settings
@@ -59,7 +61,7 @@ class Context:
     camera_mode = 'arcball'
     control_mode = 'rotate'
     
-    focal_length = 2.0
+    focal_length = 1.0
     
     x_step = 3.0
     y_step = 3.0

@@ -2,6 +2,7 @@ from loguru import logger
 import dearpygui.dearpygui as dpg
 
 from context import Context
+from render_panel import update_render_view
 
 
 def increase_camera_alpha():
@@ -86,7 +87,7 @@ def decrease_camera_rotation_z():
 
 
 def on_key_press(sender, app_data):
-    if dpg.is_item_hovered("render_window"):
+    if dpg.is_item_hovered("stack_panel_1"):
         # Select camera mode between turntable and arcball
         
         mode = Context.camera_mode
@@ -151,4 +152,4 @@ def on_key_press(sender, app_data):
 
     logger.info(f'Sender: {sender}')
     logger.info(f'App data: {app_data}')
-    logger.info(f'Mouse hover element: {dpg.is_item_hovered("render window")}')
+    # logger.info(f'Mouse hover element: {dpg.is_item_hovered("render window")}')

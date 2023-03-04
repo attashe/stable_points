@@ -1,6 +1,9 @@
+import os
 import sys
 import torch
 import math
+import matplotlib.pyplot as plt
+
 import torchvision
 import torchvision.transforms as T
 
@@ -15,6 +18,11 @@ from infer import InferenceHelper
 sys.path.append('G:/Python Scripts/MiDaS')
 from midas.dpt_depth import DPTDepthModel
 from midas.transforms import Resize, NormalizeImage, PrepareForNet
+
+sys.path.append('repos/AdelaiDepth/LeReS/Minist_Test/')
+from lib.multi_depth_model_woauxi import RelDepthModel
+from lib.net_tools import load_ckpt
+
 
 class DepthModel():
     def __init__(self, device):
@@ -157,3 +165,70 @@ class AdaBinsDepthPredict:
         depth = depth.astype('uint8')
 
         Image.fromarray(depth.squeeze()).save(save_path)
+     
+
+# =========================================
+#               LeReS Block
+# =========================================
+def scale_torch(img):
+    """
+    Scale the image and output it in torch.tensor.
+    :param img: input rgb is in shape [H, W, C], input depth/disp is in shape [H, W]
+    :param scale: the scale factor. float
+    :return: img. [C, H, W]
+    """
+    if len(img.shape) == 2:
+        img = img[np.newaxis, :, :]
+    if img.shape[2] == 3:
+        transform = T.Compose([T.ToTensor(),
+		                                T.Normalize((0.485, 0.456, 0.406) , (0.229, 0.224, 0.225) )])
+        img = transform(img)
+    else:
+        img = img.astype(np.float32)
+        img = torch.from_numpy(img)
+    return img
+
+class args:
+    load_ckpt = 'J:/Weights/leres_weights/res101.pth'
+    backbone = 'resnext101'
+
+class LeResInfer:
+    
+    def __init__(self, backbone='resnext101') -> None:
+        # create depth model
+        self.depth_model = RelDepthModel(backbone=backbone)
+        self.depth_model.eval()
+
+        # load checkpoint
+        load_ckpt(args, self.depth_model, None, None)
+        self.depth_model.cuda()
+    
+    def predict_depth(self, image: np.ndarray, is_rgb=True, save_depth=False, image_dir_out='./'):
+        """Predict depth for monocular image
+
+        Args:
+            image (np.ndarray): RGB image array
+        """
+        rgb = image if is_rgb else cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        rgb_c = image[:, :, ::-1].copy()
+        gt_depth = None
+        A_resize = cv2.resize(rgb_c, (448, 448))
+        rgb_half = cv2.resize(rgb, (rgb.shape[1]//2, rgb.shape[0]//2), interpolation=cv2.INTER_LINEAR)
+
+        img_torch = scale_torch(A_resize)[None, :, :, :]
+        pred_depth = self.depth_model.inference(img_torch).cpu().numpy().squeeze()
+        pred_depth_ori = cv2.resize(pred_depth, (rgb.shape[1], rgb.shape[0]))
+
+        # if GT depth is available, uncomment the following part to recover the metric depth
+        #pred_depth_metric = recover_metric_depth(pred_depth_ori, gt_depth)
+        if save_depth:
+            img_name = v.split('/')[-1]
+            cv2.imwrite(os.path.join(image_dir_out, img_name), rgb)
+            # save depth
+            plt.imsave(os.path.join(image_dir_out, img_name[:-4]+'-depth.png'), pred_depth_ori, cmap='rainbow')
+            cv2.imwrite(os.path.join(image_dir_out, img_name[:-4]+'-depth_raw.png'), (pred_depth_ori/pred_depth_ori.max() * 60000).astype(np.uint16))
+        
+        return pred_depth, pred_depth_ori
+    
+    def predict_points(self, image):
+        raise Exception('Not implemented error')

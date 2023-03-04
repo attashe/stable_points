@@ -2,6 +2,7 @@ import dearpygui.dearpygui as dpg
 from loguru import logger
 
 from context import Context
+from render_panel import update_render_view
 
 
 def update_focal_length(sender):
@@ -9,7 +10,7 @@ def update_focal_length(sender):
     Context.focal_length = value
     
     Context.render.camera.focal_length = Context.focal_length
-    # update_render_view()
+    update_render_view()
 
 
 def reset_camera():
@@ -22,15 +23,6 @@ class CameraPanelWidget:
     def __init__(self) -> None:
         with dpg.group(label="Camera"):
             dpg.add_button(label="Init Image Selector", callback=lambda: dpg.show_item("file_dialog_id"))
-            
-            def update_depth_scale(sender):
-                Context.depthscale = dpg.get_value(sender)
-                print(f'depth_scale: {Context.depthscale}')
-            
-            # Add a depthscale slider
-            dpg.add_text("Depth Scale")
-            depth_scale_slider = dpg.add_slider_float(label='Depthscale', tag="float_depth_scale", default_value=Context.depthscale, min_value=0.1, max_value=1000.0)
-            dpg.set_item_callback(depth_scale_slider, update_depth_scale)
             
             dpg.add_text("focal length")
             focal_length_slider = dpg.add_slider_float(label="float_f", default_value=Context.focal_length, min_value=0.1, max_value=10)
