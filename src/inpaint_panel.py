@@ -56,7 +56,8 @@ def inpaint_callback(sender, app_data):
     res = cv2.resize(res, (Context.image_width, Context.image_height), interpolation=cv2.INTER_LANCZOS4)
     Context.inpainted_image = res
     
-    np.copyto(Context.inpaint_data, res.astype(np.float32) / 255)
+    Context.view_panel.update(inpaint=Context.inpainted_image)
+    # np.copyto(Context.inpaint_data, res.astype(np.float32) / 255)
 
 
 def save_inpaint_callback(sender, app_data):

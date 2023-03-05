@@ -18,6 +18,12 @@ def reset_camera():
     pass
 
 
+def reload_image_callback():
+    if Context.image_wrapper is not None:
+        Context.image_wrapper.render_image()
+        update_render_view()
+
+
 class CameraPanelWidget:
     
     def __init__(self) -> None:
@@ -48,6 +54,9 @@ class CameraPanelWidget:
             # Add a radio button to select the camera mode
             dpg.add_radio_button(items=["Arcball", "Turntable"], callback=update_camera_mode)
             
+            dpg.add_separator()
+            
+            dpg.add_button(label='Reload image', tag='reload_button_tag', callback=reload_image_callback)
             dpg.add_separator()
             
             def update_control_mode(sender, app_data):

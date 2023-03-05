@@ -29,8 +29,9 @@ class ImageWrapper():
         
         self.points, self.colors = self._create_pointcloud(self.upscaled_image)
         
-        h, w = self.orig_image.shape[:2]
-        self.image = cv2.resize(self.orig_image, (int(w / Context.downscale), int(h / Context.downscale)))
+        # h, w = self.orig_image.shape[:2]
+        # Downscaled image
+        # self.image = cv2.resize(self.orig_image, (int(w / Context.downscale), int(h / Context.downscale)))
         Context.image_width = image.shape[1]
         Context.image_height = image.shape[0]
 
@@ -52,12 +53,20 @@ class ImageWrapper():
         render.points = self.points
         render.colors = self.colors
         
+        Context.render = render
+        
+        self.render_image()
+        
+    def _load_image(self, image):
+        pass
+    
+    def render_image(self):
+        render = Context.render
+        
         render.camera.set_position(0, 0, 0)
-        render.camera.radius = 0.01# Context.image_height * Context.downscale
+        render.camera.radius = 0.01  # Context.image_height * Context.downscale
         render.camera.alpha = 0
         render.camera.beta = - np.pi / 2
-        
-        Context.render = render
         
         depth = Context.depth_panel.predict_img(self.orig_image)
 
@@ -133,7 +142,7 @@ def update_render_view():
     
     depth_img = Context.image_wrapper.depth2img(Context.rendered_depth)
     
-    img_f = image.astype(np.float32) / 255
+    # img_f = image.astype(np.float32) / 255
     # np.copyto(Context.texture_data, img_f)
     
     inpaint_mask = depth == 0

@@ -29,6 +29,7 @@ class Context:
     ddim_eta = 0.0
     
     ## Inpainting settings
+    inpainter = None
     fill = 'default'
     use_inpaint_model = True
     

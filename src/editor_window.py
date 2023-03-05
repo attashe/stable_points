@@ -49,6 +49,7 @@ from mask_processing import *
 from image_panel import ImagePanel
 from render_panel import ViewTriPanel, update_render_view, ImageWrapper
 from depth_panel import DepthPanel
+from mask_processing_panel import MaskPanel
 
 
 class MaskProcessingWidget:
@@ -274,73 +275,9 @@ def add_view_widgets():
     #     # dpg.add_text("Inpaint result will be here")
         dpg.add_image("inpaint_tag", tag='inpaint_image')
 
-def render():
+
+def load_image_file():
     pass
-
-
-def update_view():
-    pass
-
-
-def prepare_render():
-    points, colors = create_pointcloud(image)
-    points -= np.array([Context.image_width / 2, Context.image_height / 2, 0])
-    points += np.random.rand(*points.shape) * 0.00001
-    
-    if not os.path.exists(depth_path):
-        generate_depthmap_midas(image, depth_path)
-        # generate_depthmap_adabins(image, depth_path)
-    
-    logger.info("Loading depthmap")
-    depth = open_image(depth_path)
-    depth = cv2.resize(depth, (Context.image_width, Context.image_height))
-
-    depth = depth[..., 0].astype(np.float32)
-    data_depth = (depth - depth.min()) / (depth.max() - depth.min()) * Context.depthscale
-    points_depth = data_depth.reshape(-1, 1)
-    
-    print(f'img.shape: {image.shape}')
-    print(f'depth.shape: {depth.shape}')
-    
-    # set z-values according to depth
-    points[:, 2] = points_depth[:, 0]
-    
-    # threshold = np.percentile(points_depth, 35)
-    # points = points[points_depth[:, 0] < threshold]
-    # colors = colors[points_depth[:, 0] < threshold]
-    # points_depth = points_depth[points_depth[:, 0] < threshold]
-    # points = rescale_depth(points, 0.3, 15.0, 1.0)
-    
-    # points[:, 2] = (points[:, 2] - np.median(points[:, 2])) * 25
-
-    h, w = image.shape[:2]
-    image = cv2.resize(image, (int(w / Context.downscale), int(h / Context.downscale)))
-    Context.image_width = image.shape[1]
-    Context.image_height = image.shape[0]
-    depth = cv2.resize(depth, (Context.image_width, Context.image_height))
-
-    Context.canvas_height = 1.0
-    Context.canvas_width = Context.image_width / Context.image_height
-    
-    render = Render(Context.image_width, Context.image_height, Context.canvas_width, Context.canvas_height,
-                    focal_length=Context.focal_length, device="cuda")
-    render.points = points
-    render.colors = colors
-    
-    render.camera.set_position(0, 0, - Context.image_height * 2)
-    render.camera.radius = 0.01# Context.image_height * Context.downscale
-    render.camera.alpha = 0
-    render.camera.beta = - np.pi / 2
-    
-    Context.render = render
-    
-    # convert plane points to perspective projection with the given focal length and depth
-    points = convert_from_uvd_numpy(points, points_depth, Context.focal_length)
-    render.points = points
-    
-    image, depth = Context.render.render()
-    
-    Context.render_image_idx += 1
 
 
 def image_select_callback(sender, app_data, user_data):
@@ -367,28 +304,23 @@ def image_select_callback(sender, app_data, user_data):
     # clear_textures()
     # add_textures_zeros()
     Context.image_wrapper = ImageWrapper(image)
-    # update_render_view()
-    
-    image, depth = Context.render.render()
-    
-    Context.rendered_image = image
-    Context.rendered_depth = depth
-    
-    w = Context.image_width
-    h = Context.image_height
-    
-    logger.debug(f'{w=}px, {h=}px')
-    
     Context.view_panel.set_size(w, h)
     
-    logger.debug(f'{Context.rendered_image.shape=}, {Context.rendered_depth.shape}')
-    depth_img = Context.image_wrapper.depth2img(Context.rendered_depth)
-    Context.view_panel.update(render=Context.rendered_image, mask=depth_img)
+    update_render_view()
     
-    # np.copyto(Context.render_data, image.astype(np.float32) / 255)
-    # np.copyto(Context.mask_data, np.zeros_like(image, dtype=np.float32))
-    # np.copyto(Context.inpaint_data, np.zeros_like(image, dtype=np.float32))
-    # add_view_widgets()
+    # image, depth = Context.render.render()
+    
+    # Context.rendered_image = image
+    # Context.rendered_depth = depth
+    
+    # w = Context.image_width
+    # h = Context.image_height
+    
+    # logger.debug(f'{w=}px, {h=}px')
+    
+    # logger.debug(f'{Context.rendered_image.shape=}, {Context.rendered_depth.shape}')
+    # depth_img = Context.image_wrapper.depth2img(Context.rendered_depth)
+    # Context.view_panel.update(render=Context.rendered_image, mask=depth_img)
 
 
 def clear_textures():
@@ -444,6 +376,10 @@ def main():
                     dpg.add_separator()
                     
                     dpg.add_button(label='Reset render', callback=restart_render_with_current_image_callback)
+                    
+                    dpg.add_separator()
+                    
+                    Context.mask_panel = MaskPanel()
 
                 add_textures_zeros()
                 # add_view_widgets()
