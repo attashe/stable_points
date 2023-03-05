@@ -3,6 +3,7 @@
 class Context:
     # Settings
     changed = False
+    image_path = ''
 
     ## Saving settings
     results_folder = 'output'
@@ -43,6 +44,7 @@ class Context:
     far = 100.0
     rescale_depth = True
     perspective_func = 'l1'  # 'l1' or 'l2'
+    use_depthmap_instead_mask = False
     
     ## Camera settings
     alpha_step = 0.01

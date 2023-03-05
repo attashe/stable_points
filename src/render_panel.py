@@ -99,7 +99,7 @@ class ImageWrapper():
     def mask2img(self, mask):
         mask_exp = np.zeros((mask.shape[0], mask.shape[1], 3))
         mask_exp[..., :] = mask[..., :] if len(mask.shape) == 3 else mask[..., None]
-        return (mask_exp / mask_exp.max() * 255).astype(np.uint8)
+        return mask_exp
     
     def depth2img(self, depth):
         depth = (depth - depth.min()) / (depth.max() - depth.min()) * 255
@@ -113,7 +113,7 @@ class ViewTriPanel:
     _n = 0    
     def __init__(self, width=512, height=512) -> None:
         ViewTriPanel._n += 1
-        with dpg.child_window(tag=f'stack_panel_{ViewTriPanel._n}'):
+        with dpg.child_window(tag=f'stack_panel_{ViewTriPanel._n}', horizontal_scrollbar=True):
             with dpg.group(horizontal=True):
                 self.render_image = ImagePanel(width, height)
                 self.mask_image = ImagePanel(width, height)
@@ -140,7 +140,7 @@ def update_render_view():
     Context.rendered_image = image
     Context.rendered_depth = depth
     
-    depth_img = Context.image_wrapper.depth2img(Context.rendered_depth)
+    
     
     # img_f = image.astype(np.float32) / 255
     # np.copyto(Context.texture_data, img_f)
@@ -149,7 +149,11 @@ def update_render_view():
     inpaint_mask = inpaint_mask.astype(np.uint8) * 255
     Context.mask = inpaint_mask
     # np.copyto(Context.mask_data[..., 0], inpaint_mask.astype(np.float32) / 255)
-    
-    Context.view_panel.update(render=Context.rendered_image, mask=depth_img)
+    if Context.use_depthmap_instead_mask:
+        depth_img = Context.image_wrapper.depth2img(Context.rendered_depth)
+        Context.view_panel.update(render=Context.rendered_image, mask=depth_img)
+    else:
+        mask_img = Context.image_wrapper.mask2img(Context.mask)
+        Context.view_panel.update(render=Context.rendered_image, mask=mask_img)
     
     logger.info(f'update_render_view: {(time.time() - start) * 1000 :.1f} ms')

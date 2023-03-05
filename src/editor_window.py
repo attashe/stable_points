@@ -22,20 +22,20 @@ Steps:
 import os
 import sys
 import time
-import threading
+# import threading
 
 import cv2
 
 import dearpygui.dearpygui as dpg
 import numpy as np
-import torch
-import torchvision
+# import torch
+# import torchvision
 import torch.nn.functional as F
 
 from pathlib import Path
 from loguru import logger
 from PIL import Image
-from prompt_toolkit import prompt
+# from prompt_toolkit import prompt
 from depth_infer import DepthModel, AdaBinsDepthPredict
 from render.render import Render
 # from inpaint import Inpainter, InpainterStandart
@@ -46,7 +46,7 @@ from inpaint_panel import InpaintPanelWidget
 from camera_panel import CameraPanelWidget
 from keyboard_controller import on_key_press
 from mask_processing import *
-from image_panel import ImagePanel
+# from image_panel import ImagePanel
 from render_panel import ViewTriPanel, update_render_view, ImageWrapper
 from depth_panel import DepthPanel
 from mask_processing_panel import MaskPanel
@@ -215,25 +215,20 @@ def init_render():
 def restart_render():
     (Path(Context.log_folder) / "render").mkdir(exist_ok=True)
     render_save_path = Path(Context.log_folder) / "render" / ('render_' + str(Context.render_image_idx).zfill(5) + '.png')
-    depth_save_path = Path(Context.log_folder) / "render" / ('depth_' + str(Context.render_image_idx).zfill(5) + '.png')
     
-    if Context.inpainted_image is not None:
-        Image.fromarray(Context.inpainted_image).save(str(render_save_path))
-    elif Context.rendered_image is not None:
-        logger.info('Inpainted image is None, step back to rendered image')
-        Image.fromarray(Context.rendered_image).save(str(render_save_path))
-    else:
-        logger.warning("Inpainting and Rendered image is None")
-        show_info('Save Error', 'Inpainting and Rendered image is None')
-
-    init_render()
-    update_render()
+    Image.fromarray(Context.inpainted_image).save(str(render_save_path))
     
-    update_render_view()
+    Context.image_path = render_save_path
+    
+    # load_image_file(Context.image_path)
+    render_new_image(Context.inpainted_image)
+    
+    Context.render_image_idx += 1
 
 
 def restart_render_with_current_image_callback(sender, app_data):
     restart_render()
+
 
 def add_textures_zeros(tag_prefix="",):
     # Init texture data with zero values
@@ -276,8 +271,23 @@ def add_view_widgets():
         dpg.add_image("inpaint_tag", tag='inpaint_image')
 
 
-def load_image_file():
-    pass
+def render_new_image(image):
+    h, w = image.shape[:2]
+    logger.info(f'Initial image size is {w}x{h}px')
+    
+    Context.image_height = h #* Context.upscale // Context.downscale
+    Context.image_width = w #* Context.upscale // Context.downscale
+    Context.init_image = image
+    
+    Context.image_wrapper = ImageWrapper(image)
+    Context.view_panel.set_size(w, h)
+    
+    update_render_view()
+
+
+def load_image_file(image_path):
+    image = open_image(image_path)
+    render_new_image(image)
 
 
 def image_select_callback(sender, app_data, user_data):
@@ -288,57 +298,31 @@ def image_select_callback(sender, app_data, user_data):
     print(user_data)
     
     # Read image from path
-    image_path = app_data['file_path_name']
-    image = open_image(image_path)
-    
-    h, w = image.shape[:2]
-    logger.info(f'Initial image size is {w}x{h}px')
-    
-    Context.image_height = h #* Context.upscale // Context.downscale
-    Context.image_width = w #* Context.upscale // Context.downscale
-    Context.init_image = image
-    
-    # image = upscale_image(image, Context.upscale)
-    
-    # update_view()
-    # clear_textures()
-    # add_textures_zeros()
-    Context.image_wrapper = ImageWrapper(image)
-    Context.view_panel.set_size(w, h)
-    
-    update_render_view()
-    
-    # image, depth = Context.render.render()
-    
-    # Context.rendered_image = image
-    # Context.rendered_depth = depth
-    
-    # w = Context.image_width
-    # h = Context.image_height
-    
-    # logger.debug(f'{w=}px, {h=}px')
-    
-    # logger.debug(f'{Context.rendered_image.shape=}, {Context.rendered_depth.shape}')
-    # depth_img = Context.image_wrapper.depth2img(Context.rendered_depth)
-    # Context.view_panel.update(render=Context.rendered_image, mask=depth_img)
+    Context.image_path = app_data['file_path_name']
+    load_image_file(Context.image_path)
 
 
-def clear_textures():
-    logger.info('Delete old textures')
-    # dpg.delete_item('render_image', children_only=True)
-    # dpg.delete_item('render_mask', children_only=True)
-    # dpg.delete_item('render_inpaint', children_only=True)
-    dpg.delete_item('render_tag')
-    dpg.delete_item('mask_tag')
-    dpg.delete_item('inpaint_tag')
+def init_log_folder():
+    result_path = Path(Context.results_folder)
+    result_path.mkdir(parents=True, exist_ok=True)
+    
+    i = 0
+    for dir in result_path.iterdir():
+        if dir.is_dir():
+            idx = int(dir.name.split('_')[-1])
+            i = max(i, idx)
+    
+    log_path = result_path / (Context.basename + str(i + 1))
+    log_path.mkdir()
+    
+    Context.log_folder = str(log_path)
 
 
 def main():
     logger.info("Starting program")
     
     logger.info('Initializing output folder')
-    # TODO: restore log folder initialization and add options for launch without logs
-    # init_log_folder()
+    init_log_folder()
     
     dpg.create_context()
     
@@ -352,8 +336,6 @@ def main():
         with dpg.table(header_row=False, tag='table'):
             dpg.add_table_column(width=300, width_fixed=True)
             dpg.add_table_column()
-            # dpg.add_table_column()
-            # dpg.add_table_column()
             with dpg.table_row(tag='main_table_row'):
                 with dpg.group(label="SidePanel"):
                     camera_widget = CameraPanelWidget()
@@ -393,17 +375,18 @@ def main():
     dpg.show_viewport()
     dpg.set_primary_window("main_window", True)
 
+    dpg.start_dearpygui()
     # below replaces, start_dearpygui()
-    while dpg.is_dearpygui_running():
-        # insert here any code you would like to run in the render loop
-        # you can manually stop by using stop_dearpygui()
-        # print("this will run every frame")
+    # while dpg.is_dearpygui_running():
+    #     # insert here any code you would like to run in the render loop
+    #     # you can manually stop by using stop_dearpygui()
+    #     # print("this will run every frame")
         
-        if Context.changed:
-            Context.changed = False
-            # Context.render()
+    #     if Context.changed:
+    #         Context.changed = False
+    #         # Context.render()
         
-        dpg.render_dearpygui_frame()
+    #     dpg.render_dearpygui_frame()
     dpg.destroy_context()
 
     logger.info("Ending program")

@@ -10,56 +10,6 @@ from context import Context
 from sd_scripts.inpaint import Inpainter, InpainterStandart
 
 
-def init_inpainting():
-    if Context.inpainter is not None: return
-    config = 'G:/GitHub/stable-diffusion/configs/stable-diffusion/v1-inpainting-inference.yaml'
-    ckpt = 'G:/Weights/stable-diffusion/sd-v1-5-inpainting.ckpt'
-    Context.inpainter = Inpainter(ckpt, config, device='cuda')
-
-    # default stable diffusion v1.4
-    # config = 'G:/GitHub/stable-diffusion/configs/stable-diffusion/v1-inference.yaml'
-    # ckpt = 'G:/Weights/sd-v-1-4-original/sd-v1-4.ckpt'
-    # Context.inpainter = InpainterStandart(ckpt, config, device='cuda')
-
-
-def inpaint_callback(sender, app_data):
-    if Context.inpainter is None:
-        init_inpainting()
-    
-    # seed = 228
-    # prompt = "Naked woman in photo studio"
-    # ddim_steps = 20
-    # num_samples = 1
-    # scale = 7
-    seed = dpg.get_value('seed')
-    prompt = dpg.get_value('prompt')
-    ddim_steps = dpg.get_value('ddim_steps')
-    scale = dpg.get_value('scale')
-    num_samples = 1
-    
-    w, h = Context.image_width, Context.image_height
-    # w, h = w // 2, h // 2  # Inpainting is slow and needs too much GPU, so we downscale the image
-    new_w, new_h = w - w % 64, h - h % 64
-    inpaint_mask = cv2.resize(Context.mask, (new_w, new_h), interpolation=cv2.INTER_NEAREST)
-    image_resized = cv2.resize(Context.rendered_image, (new_w, new_h), interpolation=cv2.INTER_LANCZOS4)
-    
-    print(image_resized.shape)
-    # print(image_resized)
-    
-    print(inpaint_mask.shape)
-    print(type(inpaint_mask))
-    
-    results = Context.inpainter.inpaint(Image.fromarray(image_resized), Image.fromarray(inpaint_mask), prompt,
-                              seed, scale, ddim_steps, num_samples, w=new_w, h=new_h)
-    
-    res = np.array(results[0])
-    res = cv2.resize(res, (Context.image_width, Context.image_height), interpolation=cv2.INTER_LANCZOS4)
-    Context.inpainted_image = res
-    
-    Context.view_panel.update(inpaint=Context.inpainted_image)
-    # np.copyto(Context.inpaint_data, res.astype(np.float32) / 255)
-
-
 def save_inpaint_callback(sender, app_data):
     filename_image = Path(Context.log_folder) / ('image_' + str(Context.save_idx).zfill(5) + '.png')
     filename_mask = Path(Context.log_folder) / ('mask_' + str(Context.save_idx).zfill(5) + '.png')
@@ -102,7 +52,7 @@ class InpaintPanelWidget:
                 self.color_button = dpg.add_button(label='   ')
                 dpg.bind_item_theme(self.color_button, self.button_yellow)
 
-            dpg.add_button(label="Inpaint", callback=inpaint_callback)
+            dpg.add_button(label="Inpaint", callback=self.inpaint_callback)
 
             # Add a inputs for inpainting parameters
             dpg.add_text("Inpainting parameters")
@@ -117,9 +67,57 @@ class InpaintPanelWidget:
 
             # Save results
             dpg.add_button(label='Save', tag='save', callback=save_inpaint_callback)
-
+    
+    def inpaint_callback(self, sender, app_data):
+        if Context.inpainter is None:
+            self.init_inpainting()
+        
+        # seed = 228
+        # prompt = "Naked woman in photo studio"
+        # ddim_steps = 20
+        # num_samples = 1
+        # scale = 7
+        seed = dpg.get_value('seed')
+        prompt = dpg.get_value('prompt')
+        ddim_steps = dpg.get_value('ddim_steps')
+        scale = dpg.get_value('scale')
+        num_samples = 1
+        
+        w, h = Context.image_width, Context.image_height
+        # w, h = w // 2, h // 2  # Inpainting is slow and needs too much GPU, so we downscale the image
+        new_w, new_h = w - w % 64, h - h % 64
+        inpaint_mask = cv2.resize(Context.mask, (new_w, new_h), interpolation=cv2.INTER_NEAREST)
+        image_resized = cv2.resize(Context.rendered_image, (new_w, new_h), interpolation=cv2.INTER_LANCZOS4)
+        
+        print(image_resized.shape)
+        # print(image_resized)
+        
+        print(inpaint_mask.shape)
+        print(type(inpaint_mask))
+        
+        results = Context.inpainter.inpaint(Image.fromarray(image_resized), Image.fromarray(inpaint_mask), prompt,
+                                seed, scale, ddim_steps, num_samples, w=new_w, h=new_h)
+        
+        res = np.array(results[0])
+        res = cv2.resize(res, (Context.image_width, Context.image_height), interpolation=cv2.INTER_LANCZOS4)
+        Context.inpainted_image = res
+        
+        Context.view_panel.update(inpaint=Context.inpainted_image)
+        # np.copyto(Context.inpaint_data, res.astype(np.float32) / 255)
+    
     def load_model_callback(self, sender, app_data):
         logger.info('Start loading inpaint model')
-        init_inpainting()
-        dpg.bind_item_theme(self.color_button, self.button_green)
+        self.init_inpainting()
         logger.info('Model was loaded')
+        
+    def init_inpainting(self):
+        if Context.inpainter is not None: return
+        config = 'G:/GitHub/stable-diffusion/configs/stable-diffusion/v1-inpainting-inference.yaml'
+        ckpt = 'G:/Weights/stable-diffusion/sd-v1-5-inpainting.ckpt'
+        Context.inpainter = Inpainter(ckpt, config, device='cuda')
+        dpg.bind_item_theme(self.color_button, self.button_green)
+
+        # default stable diffusion v1.4
+        # config = 'G:/GitHub/stable-diffusion/configs/stable-diffusion/v1-inference.yaml'
+        # ckpt = 'G:/Weights/sd-v-1-4-original/sd-v1-4.ckpt'
+        # Context.inpainter = InpainterStandart(ckpt, config, device='cuda')

@@ -8,7 +8,7 @@ import torch.nn.functional as F
 
 from context import Context
 from utils import show_info
-
+from render_panel import update_render_view
 from mask_processing import erode_mask, dilate_mask, close_small_holes, maxpool2d_closing
 
 
@@ -60,13 +60,28 @@ def refine_render():
     np.copyto(Context.rendered_image, image)
     np.copyto(Context.mask, mask)
 
-    np.copyto(Context.mask_data[..., 0], Context.mask.astype(np.float32) / 255)
-    np.copyto(Context.texture_data, Context.rendered_image.astype(np.float32) / 255)
+    mask_img = Context.image_wrapper.mask2img(Context.mask)
+    Context.view_panel.update(render=Context.rendered_image, mask=mask_img)
+    # np.copyto(Context.mask_data[..., 0], Context.mask.astype(np.float32) / 255)
+    # np.copyto(Context.texture_data, Context.rendered_image.astype(np.float32) / 255)
+
+
+def depthmap_checker(sender):
+    val = dpg.get_value(sender)
+    logger.debug(f'Set depthmap checker to {val}')
+    if val:
+        Context.use_depthmap_instead_mask = True
+    else:
+        Context.use_depthmap_instead_mask = False
+        
+    update_render_view()
 
 
 class MaskPanel:
     
     def __init__(self) -> None:
+        dpg.add_checkbox(label='Use depthmap instead mask', callback=depthmap_checker, default_value=False)
+        
         kernel_slider_erode = dpg.add_slider_int(label="kernel", default_value=3, min_value=1, max_value=31)
         iterations_cnt_erode = dpg.add_slider_int(label="iterations", default_value=1, min_value=1, max_value=5)
         
@@ -78,14 +93,22 @@ class MaskPanel:
                 return
 
             iterations = dpg.get_value(iterations_cnt_erode)
-            Context.mask = erode_mask(Context.mask, kernel, iterations)
-            np.copyto(Context.mask_data[..., 0], Context.mask.astype(np.float32) / 255)
+            if Context.use_depthmap_instead_mask:
+                Context.rendered_depth = erode_mask(Context.rendered_depth, kernel, iterations)
+                depth_img = Context.image_wrapper.depth2img(Context.rendered_depth)
+                Context.view_panel.update(mask=depth_img)
+            else:
+                Context.mask = erode_mask(Context.mask, kernel, iterations)
+                mask_img = Context.image_wrapper.mask2img(Context.mask)
+                Context.view_panel.update(mask=mask_img)
+            
+            # np.copyto(Context.mask_data[..., 0], Context.mask.astype(np.float32) / 255)
             
         dpg.add_button(label="Erode", callback=erode_mask_callback)
         
         dpg.add_separator()
-        # Dilate
         
+        # Dilate
         kernel_slider_dilate = dpg.add_slider_int(label="kernel", default_value=3, min_value=1, max_value=31)
         iterations_cnt_dilate = dpg.add_slider_int(label="iterations", default_value=1, min_value=1, max_value=5)
         
@@ -97,8 +120,16 @@ class MaskPanel:
                 return
 
             iterations = dpg.get_value(iterations_cnt_dilate)
-            Context.mask = dilate_mask(Context.mask, kernel, iterations)
-            np.copyto(Context.mask_data[..., 0], Context.mask.astype(np.float32) / 255)
+            if Context.use_depthmap_instead_mask:
+                Context.rendered_depth = dilate_mask(Context.rendered_depth, kernel, iterations)
+                depth_img = Context.image_wrapper.depth2img(Context.rendered_depth)
+                Context.view_panel.update(mask=depth_img)
+            else:
+                Context.mask = dilate_mask(Context.mask, kernel, iterations)
+                mask_img = Context.image_wrapper.mask2img(Context.mask)
+                Context.view_panel.update(mask=mask_img)
+            # Context.mask = dilate_mask(Context.mask, kernel, iterations)
+            # np.copyto(Context.mask_data[..., 0], Context.mask.astype(np.float32) / 255)
         
         dpg.add_button(label="Dilate", callback=dilate_mask_callback)
         
@@ -175,3 +206,7 @@ class MaskPanel:
             np.copyto(Context.mask_data[..., 0], Context.mask.astype(np.float32) / 255)
         
         dpg.add_button(label='Reset mask', callback=reset_mask_callback)
+        
+    def update_mask(self):
+        # TODO: make special function for show depthmap and mask
+        pass

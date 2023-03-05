@@ -209,7 +209,7 @@ def img2img_inpainter(sampler, model, image, mask, prompt, seed, scale, ddim_ste
     all_samples = []
     seeds = ""
     with torch.no_grad():
-        with torch.autocast("cuda"):
+        with torch.autocast():
             for prompts in tqdm(data, desc="data"):
                 uc = None
                 if scale != 1.0:
@@ -250,6 +250,8 @@ def img2img_inpainter(sampler, model, image, mask, prompt, seed, scale, ddim_ste
                     seeds += str(seed) + ","
                     seed += 1
                     base_count += 1
+    
+    torch.cuda.empty_cache()
         
     return Image.fromarray(x_sample.astype(np.uint8))
 
