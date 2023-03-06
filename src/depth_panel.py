@@ -49,7 +49,8 @@ class DepthPanel:
     def __init__(self) -> None:
         self.loaded_model = None  # 'midas' | 'adabins' | 'leres'
         
-        with dpg.group(label="Depth"):
+        # with dpg.group(label="Depth"):
+        with dpg.collapsing_header(label="Depth"):
             def update_depth_scale(sender):
                 Context.depthscale = dpg.get_value(sender)
                 print(f'depth_scale: {Context.depthscale}')

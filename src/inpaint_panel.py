@@ -36,7 +36,8 @@ def save_inpaint_callback(sender, app_data):
 class InpaintPanelWidget:
 
     def __init__(self) -> None:
-        with dpg.group(label='Stable Diffusion'):
+        # with dpg.group(label='Stable Diffusion'):
+        with dpg.collapsing_header(label="Stable Diffusion"):
             with dpg.theme() as self.button_yellow:
                 with dpg.theme_component(dpg.mvAll):
                     dpg.add_theme_color(dpg.mvThemeCol_Button, (150, 150, 20), category=dpg.mvThemeCat_Core)

@@ -198,6 +198,7 @@ def init_render():
     render.camera.radius = 0.01# Context.image_height * Context.downscale
     render.camera.alpha = 0
     render.camera.beta = - np.pi / 2
+    render.camera.theta = 0
     
     Context.render = render
     

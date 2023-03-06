@@ -1,3 +1,4 @@
+import numpy as np
 import dearpygui.dearpygui as dpg
 from loguru import logger
 
@@ -15,7 +16,13 @@ def update_focal_length(sender):
 
 def reset_camera():
     # TODO: function for reset camera position
-    pass
+    camera = Context.render.camera
+    camera.set_position(0, 0, - Context.image_height * 2)
+    camera.radius = 0.01# Context.image_height * Context.downscale
+    camera.alpha = 0
+    camera.beta = - np.pi / 2
+    camera.theta = 0
+    update_render_view()
 
 
 def reload_image_callback():
@@ -28,6 +35,7 @@ class CameraPanelWidget:
     
     def __init__(self) -> None:
         with dpg.group(label="Camera"):
+        # with dpg.collapsing_header(label="Camera", default_open=True):
             dpg.add_button(label="Init Image Selector", callback=lambda: dpg.show_item("file_dialog_id"))
             
             dpg.add_text("focal length")
