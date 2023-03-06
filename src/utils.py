@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from pathlib import Path
+from typing import Union
+
 import cv2
 import numpy as np
 import dearpygui.dearpygui as dpg
-
-from typing import Union
-from pathlib import Path
+from PIL import Image, ImageOps
 from loguru import logger
 
 from context import Context
@@ -41,6 +42,27 @@ def check_camera_connection(max_device_count=4, is_debug=False):
                 print(' -> None')
 
     return device_no_list
+
+
+def resize_padding_pil(img, size):
+    old_size = img.size  # old_size[0] is in (width, height) format
+
+    ratio = float(size)/max(old_size)
+    new_size = tuple([int(x*ratio) for x in old_size])
+    # use thumbnail() or resize() method to resize the input image
+
+    # thumbnail is a in-place operation
+
+    # im.thumbnail(new_size, Image.ANTIALIAS)
+
+    img = img.resize(new_size, Image.Resampling.LANCZOS)
+
+    delta_w = size - new_size[0]
+    delta_h = size - new_size[1]
+    padding = (delta_w//2, delta_h//2, delta_w-(delta_w//2), delta_h-(delta_h//2))
+    new_img = ImageOps.expand(img, padding)
+    
+    return new_img
 
 
 def dpg_set_value(tag, value):

@@ -20,8 +20,8 @@ Steps:
 12. Goto to step 3
 """
 import os
-import sys
-import time
+# import sys
+# import time
 # import threading
 
 import cv2
@@ -30,13 +30,13 @@ import dearpygui.dearpygui as dpg
 import numpy as np
 # import torch
 # import torchvision
-import torch.nn.functional as F
+# import torch.nn.functional as F
 
 from pathlib import Path
 from loguru import logger
 from PIL import Image
 # from prompt_toolkit import prompt
-from depth_infer import DepthModel, AdaBinsDepthPredict
+# from depth_infer import DepthModel, AdaBinsDepthPredict
 from render.render import Render
 # from inpaint import Inpainter, InpainterStandart
 

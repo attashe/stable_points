@@ -33,10 +33,17 @@ class Context:
     inpainter = None
     fill = 'default'
     use_inpaint_model = True
+    use_automatic_api = False
+    api = None
+    api_model_name = 'sd-v1-5-inpainting'
     
     ## Depth models settings
     depth_type = 'midas'  # Default depth model type 'midas' | 'adabins' | 'leres'
     depth_model = None
+    depth_resolution = 384
+    midas_resolution_default = 384
+    adabins_resolution_default = 448
+    leres_resolution_default = 448
     adabins_weights = "weights/adabit.pth"
     midas_weights = "weights/mida.pth"
     depthscale = 15.0  # 3.0, 15.0

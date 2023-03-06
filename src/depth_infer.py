@@ -12,6 +12,8 @@ import numpy as np
 from einops import rearrange, repeat
 from PIL import Image
 
+from utils import resize_padding_pil
+
 sys.path.append('G:/Python Scripts/AdaBins')
 from infer import InferenceHelper
 
@@ -25,11 +27,12 @@ from lib.net_tools import load_ckpt
 
 
 class DepthModel():
-    def __init__(self, device):
+    def __init__(self, device, resolution=384):
         self.depth_min = 1000
         self.depth_max = -1000
         self.device = device
         self.midas_model = None
+        self.resolution = resolution
         self.midas_transform = None
         self.model_path = 'G:/GitHub/DeforumStableDiffusionLocal/models'
 
@@ -43,7 +46,7 @@ class DepthModel():
 
         self.midas_transform = T.Compose([
             Resize(
-                384, 384,
+                self.resolution, self.resolution,
                 resize_target=None,
                 keep_aspect_ratio=True,
                 ensure_multiple_of=32,
@@ -194,16 +197,20 @@ class args:
 
 class LeResInfer:
     
-    def __init__(self, backbone='resnext101') -> None:
+    def __init__(self, resolution: int = 448, backbone='resnext101') -> None:
         # create depth model
         self.depth_model = RelDepthModel(backbone=backbone)
         self.depth_model.eval()
-
+        
+        self.resolution = resolution
+        
         # load checkpoint
         load_ckpt(args, self.depth_model, None, None)
         self.depth_model.cuda()
     
-    def predict_depth(self, image: np.ndarray, is_rgb=True, save_depth=False, image_dir_out='./'):
+    def predict_depth(self, image: np.ndarray, is_rgb=True, 
+                      resolution: int = None, save_depth=False, keep_ratio=False,
+                      image_dir_out='./'):
         """Predict depth for monocular image
 
         Args:
@@ -211,16 +218,26 @@ class LeResInfer:
         """
         rgb = image if is_rgb else cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         rgb_c = image[:, :, ::-1].copy()
-        gt_depth = None
-        A_resize = cv2.resize(rgb_c, (448, 448))
-        rgb_half = cv2.resize(rgb, (rgb.shape[1]//2, rgb.shape[0]//2), interpolation=cv2.INTER_LINEAR)
+        
+        if resolution is not None:
+            self.resolution = resolution
+        # gt_depth = None
+        if keep_ratio:
+            A_resize, out_crop = resize_padding_pil(rgb_c, size=self.resolution)
+        else:
+            A_resize = cv2.resize(rgb_c, (self.resolution, self.resolution))
+        # rgb_half = cv2.resize(rgb, (rgb.shape[1]//2, rgb.shape[0]//2), interpolation=cv2.INTER_LINEAR)
 
         img_torch = scale_torch(A_resize)[None, :, :, :]
         pred_depth = self.depth_model.inference(img_torch).cpu().numpy().squeeze()
+        
+        if keep_ratio:
+            pred_depth = np.array(pred_depth)[out_crop[1][0] : out_crop[1][1], out_crop[0][0] : out_crop[0][1]]
         pred_depth_ori = cv2.resize(pred_depth, (rgb.shape[1], rgb.shape[0]))
 
         # if GT depth is available, uncomment the following part to recover the metric depth
-        #pred_depth_metric = recover_metric_depth(pred_depth_ori, gt_depth)
+        # pred_depth_metric = recover_metric_depth(pred_depth_ori, gt_depth)
+        # TODO: fix save depth function
         if save_depth:
             img_name = v.split('/')[-1]
             cv2.imwrite(os.path.join(image_dir_out, img_name), rgb)

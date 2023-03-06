@@ -2,6 +2,7 @@ import dearpygui.dearpygui as dpg
 from loguru import logger
 
 import cv2
+import webuiapi
 import numpy as np
 from PIL import Image
 from pathlib import Path
@@ -46,6 +47,8 @@ class InpaintPanelWidget:
                     dpg.add_theme_color(dpg.mvThemeCol_Button, (20, 150, 20), category=dpg.mvThemeCat_Core)
                     dpg.add_theme_color(dpg.mvThemeCol_ButtonHovered, (20, 220, 20), category=dpg.mvThemeCat_Core)
 
+            dpg.add_checkbox(label='Use automatic1111 API', callback=self.automatic_checker, default_value=False)
+
             with dpg.group(horizontal=True):
             # Add inpainting button
                 dpg.add_button(label='Load Model', tag='load_model_button_tag', callback=self.load_model_callback)
@@ -68,7 +71,42 @@ class InpaintPanelWidget:
             # Save results
             dpg.add_button(label='Save', tag='save', callback=save_inpaint_callback)
     
+    def init_api(self):
+        dpg.bind_item_theme(self.color_button, self.button_yellow)
+        Context.api = webuiapi.WebUIApi(host='127.0.0.1', port=7860)
+        Context.api.util_set_model(Context.api_model_name)
+        dpg.bind_item_theme(self.color_button, self.button_green)
+    
+    def automatic_inference(self):
+        if Context.api is None:
+            self.init_api()
+            return
+        
+        seed = dpg.get_value('seed')
+        prompt = dpg.get_value('prompt')
+        ddim_steps = dpg.get_value('ddim_steps')
+        scale = dpg.get_value('scale')
+        
+        inpainting_result = Context.api.img2img(
+            images=[Image.fromarray(Context.rendered_image)],
+            mask_image=Image.fromarray(Context.mask),
+            inpainting_fill=0,
+            prompt=prompt,
+            seed=seed,
+            steps=ddim_steps,
+            cfg_scale=scale,
+            denoising_strength=1.0
+        )
+
+        res = np.array(inpainting_result.image)
+        Context.inpainted_image = res
+        
+        Context.view_panel.update(inpaint=Context.inpainted_image)
+    
     def inpaint_callback(self, sender, app_data):
+        if Context.use_automatic_api:
+            self.automatic_inference()
+        
         if Context.inpainter is None:
             self.init_inpainting()
         
@@ -121,3 +159,11 @@ class InpaintPanelWidget:
         # config = 'G:/GitHub/stable-diffusion/configs/stable-diffusion/v1-inference.yaml'
         # ckpt = 'G:/Weights/sd-v-1-4-original/sd-v1-4.ckpt'
         # Context.inpainter = InpainterStandart(ckpt, config, device='cuda')
+        
+    def automatic_checker(self, sender):
+        val = dpg.get_value(sender)
+        logger.debug(f'Set depthmap checker to {val}')
+        if val:
+            Context.use_automatic_api = True
+        else:
+            Context.use_automatic_api = False

@@ -12,6 +12,8 @@ import numpy as np
 from context import Context
 from depth_infer import DepthModel, AdaBinsDepthPredict, LeResInfer
 from utils import dpg_get_value
+from render_panel import update_render_view
+
 
 def update_focal_length(sender):
     value = dpg.get_value(sender)
@@ -21,10 +23,14 @@ def update_focal_length(sender):
     update_render_view()
 
 
+def update_depth_resolution(sender):
+    value = dpg.get_value(sender)
+    Context.depth_resolution = value
+
+
 def reset_camera():
     # TODO: function for reset camera position
     pass
-
 
 
 def init_depth():
@@ -50,8 +56,16 @@ class DepthPanel:
             
             # Add a depthscale slider
             dpg.add_text("Depth Scale")
-            depth_scale_slider = dpg.add_slider_float(label='Depthscale', tag="float_depth_scale", default_value=Context.depthscale, min_value=0.1, max_value=1000.0)
+            depth_scale_slider = dpg.add_slider_float(label='Depthscale', tag="float_depth_scale", 
+                                                      default_value=Context.depthscale,
+                                                      min_value=0.1, max_value=250.0)
             dpg.set_item_callback(depth_scale_slider, update_depth_scale)
+            
+            dpg.add_text('Depth inference resolution')
+            depth_resolution_slider = dpg.add_input_int(label='resolution', tag='depth_res_slider',
+                                                        default_value=Context.depth_resolution,
+                              min_value=256, max_value=1536)
+            dpg.set_item_callback(depth_resolution_slider, update_depth_resolution)
             
             # TODO: unify all depth models to one API and remove duplicates for model types
             self.selector_tag = 'depth_model_selector'
@@ -84,9 +98,12 @@ class DepthPanel:
         self.init_model()
 
     def init_model(self):
-        if self.loaded_model == dpg_get_value(self.selector_tag):
+        model_name = dpg_get_value(self.selector_tag)
+        if self.loaded_model == model_name:
+            logger.info(f'Model {model_name} already loaded')
             return
-        logger.info('Loading depth model')
+        Context.depth_type = model_name
+        logger.info(f'Loading depth model {model_name}')
         start_time = time.time()
         dpg.bind_item_theme(self.color_button, self.button_yellow)
         
@@ -115,7 +132,7 @@ class DepthPanel:
         elif self.loaded_model == 'adabins':
             raise Exception('Not implemented error')
         elif self.loaded_model == 'leres':
-            pred, pred_ori = Context.depth_model.predict_depth(img)
+            pred, pred_ori = Context.depth_model.predict_depth(img, resolution=Context.depth_resolution)
             depth = pred_ori
             
         return depth

@@ -13,7 +13,7 @@ from mask_processing import *
 from image_panel import ImagePanel
 
 from render.render import Render
-from depth_panel import init_depth
+# from depth_panel import init_depth
 
 def upscale_image(image, factor):
     h, w = image.shape[:2]
@@ -139,8 +139,6 @@ def update_render_view():
     
     Context.rendered_image = image
     Context.rendered_depth = depth
-    
-    
     
     # img_f = image.astype(np.float32) / 255
     # np.copyto(Context.texture_data, img_f)
