@@ -7,9 +7,25 @@ import cv2
 import numpy as np
 import dearpygui.dearpygui as dpg
 from PIL import Image, ImageOps
+from sklearn.neighbors import KDTree
 from loguru import logger
 
 from context import Context
+
+
+def clear_pointcloud(points, threshold, radius):
+    # Create a KD tree from the points
+    tree = KDTree(points)
+
+    # Query the tree to find the neighbors for each point
+    num_neighbors = tree.query_radius(points, r=radius, count_only=True)
+
+    # Find points with fewer neighbors than threshold
+    indices = np.where(num_neighbors < threshold)[0]
+    keep_indices = np.setdiff1d(np.arange(len(points)), indices)
+
+    # Return the points with enough neighbors
+    return points[keep_indices], keep_indices
 
 
 def convert_cv_to_dpg(image, width, height):

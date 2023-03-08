@@ -34,8 +34,13 @@ class Context:
     fill = 'default'
     use_inpaint_model = True
     use_automatic_api = False
+    use_controlnet = False
     api = None
     api_model_name = 'sd-v1-5-inpainting'
+    
+    # Remove alone points
+    points_thresh = 3
+    points_radius = 0.5
     
     ## Depth models settings
     depth_type = 'midas'  # Default depth model type 'midas' | 'adabins' | 'leres'
@@ -47,6 +52,8 @@ class Context:
     adabins_weights = "weights/adabit.pth"
     midas_weights = "weights/mida.pth"
     depthscale = 15.0  # 3.0, 15.0
+    depth_gamma = 1.0
+    depth_alpha = 0.1
     near = 15.0
     far = 100.0
     rescale_depth = True

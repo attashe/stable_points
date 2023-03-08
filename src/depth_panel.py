@@ -92,9 +92,76 @@ class DepthPanel:
                 dpg.add_button(label='Load Model', tag='load_depthmodel_button_tag', callback=self.load_model_callback)
                 self.color_button = dpg.add_button(label='   ')
                 dpg.bind_item_theme(self.color_button, self.button_yellow)
+            
+            dpg.add_separator()
+            dpg.add_text('Depth gamma correction')
+            dpg.add_slider_float(label='gamma', tag='gamma_slider', default_value=Context.depth_gamma, min_value=0.01, max_value=5)
+            dpg.add_button(label='Apply gamma correction', tag='gamma_corr_button', callback=self.apply_gamma_corr)
+            
+            dpg.add_separator()
+            dpg.add_text('Depth sigmoid correction')
+            dpg.add_slider_float(label='alpha', tag='alpha_slider', default_value=Context.depth_alpha, min_value=0.1, max_value=10)
+            dpg.add_button(label='Apply sigmoid correction', tag='sigmoid_corr_button', callback=self.apply_sigmoid_correction)
 
         dpg.add_separator()
 
+    def apply_gamma_corr(self, sender):
+        gamma = dpg.get_value('gamma_slider')
+        Context.depth_gamma = gamma
+
+        eps = 1e-5
+        
+        # Get depth points
+        depth_points = Context.render.points[:, 2]
+        dmin = depth_points.min()
+        dmax = depth_points.max()
+        
+        if abs(dmax - dmin) < eps:
+            logger.info('Depth map is uniform')
+            return
+
+        # Transform to [0, 1] range
+        depth_points = (depth_points - dmin) / (dmax - dmin)
+        # Apply gamma correction
+        depth_points = depth_points ** gamma
+        # Return range back
+        depth_points = depth_points * (dmax - dmin) + dmin
+        
+        Context.render.points[:, 2] = depth_points
+        
+        update_render_view()       
+        
+    def apply_sigmoid_correction(self, sender):
+        alpha = dpg.get_value('alpha_slider')
+        Context.depth_alpha = alpha
+
+        eps = 1e-5
+        
+        # Get depth points
+        depth_points = Context.render.points[:, 2]
+        dmin = depth_points.min()
+        dmax = depth_points.max()
+        dmean = depth_points.mean()
+
+        if abs(dmax - dmin) < eps:
+            logger.info('Depth map is uniform')
+            return
+
+        # Transform to [-1, 1] range
+        depth_points = (depth_points - dmean) / (dmax - dmin) * 2
+        # Apply gamma correction
+        sigmoid = lambda x: 1 / (1 + np.e ** (- alpha * x))
+        # [-1, 1] -> [sigm(-1), sigm(1)] with center in (0.5) -> | alpha -> inf | -> [0, 1]
+        depth_points = sigmoid(depth_points)
+        # Set range to [0, 1]
+        depth_points = (depth_points - depth_points.min()) / (depth_points.max() - depth_points.min())
+        # Set range back
+        depth_points = depth_points * (dmax - dmin) + dmin
+        
+        Context.render.points[:, 2] = depth_points
+        
+        update_render_view()   
+    
     def load_model_callback(self, sender):
         self.init_model()
 

@@ -27,14 +27,24 @@ class ImageWrapper():
         self.orig_image = image
         self.upscaled_image = upscale_image(self.orig_image, Context.upscale)
         
-        self.points, self.colors = self._create_pointcloud(self.upscaled_image)
+        self._load_points()
         
         # h, w = self.orig_image.shape[:2]
         # Downscaled image
         # self.image = cv2.resize(self.orig_image, (int(w / Context.downscale), int(h / Context.downscale)))
         Context.image_width = image.shape[1]
         Context.image_height = image.shape[0]
-
+        
+        self._setup_render()
+        
+        self.init_render()
+        
+        self.render_image()
+        
+    def _load_points(self, image):
+        self.points, self.colors = self._create_pointcloud(self.upscaled_image)
+        
+    def _setup_render(self):
         # if Context.image_height < Context.image_width:
         Context.canvas_height = 1.0
         Context.canvas_width = Context.image_width / Context.image_height
@@ -50,15 +60,18 @@ class ImageWrapper():
         render = Render(Context.image_width, Context.image_height,
                         Context.canvas_width, Context.canvas_height,
                         focal_length=Context.focal_length / ratio, device="cuda")
-        render.points = self.points
-        render.colors = self.colors
         
         Context.render = render
         
-        self.render_image()
+    def _init_render(self):
+        Context.render.points = self.points
+        Context.render.colors = self.colors
         
-    def _load_image(self, image):
-        pass
+    def reload_image(self):
+        if Context.render is not None:
+            self._load_points()
+            self._init_render()
+            self.render_image()
     
     def render_image(self):
         render = Context.render

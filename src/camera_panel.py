@@ -4,6 +4,7 @@ from loguru import logger
 
 from context import Context
 from render_panel import update_render_view
+from utils import clear_pointcloud
 
 
 def update_focal_length(sender):
@@ -27,8 +28,23 @@ def reset_camera():
 
 def reload_image_callback():
     if Context.image_wrapper is not None:
-        Context.image_wrapper.render_image()
+        Context.image_wrapper.reload_image()
         update_render_view()
+        
+        
+def clean_alone_points():
+    points, indices = clear_pointcloud(Context.render.points, Context.points_thresh, Context.points_radius)
+    
+    Context.render.points = points
+    Context.render.colors = Context.render.colors[indices]
+    
+    update_render_view()
+
+def set_neighbors(sender, __):
+    Context.points_thresh = dpg.get_value(sender)
+    
+def set_radius(sender, __):
+    Context.points_radius = dpg.get_value(sender)
 
 
 class CameraPanelWidget:
@@ -81,5 +97,10 @@ class CameraPanelWidget:
             # Add a radio button to select the control mode
             dpg.add_radio_button(items=["Translate", "Rotate"], default_value="Rotate", callback=update_control_mode)
             # dpg.set_value("control_mode", "rotate")
+            
+            dpg.add_button(label='Remove noise points', callback=clean_alone_points)
+            dpg.add_slider_int(label='neighbors', default_value=Context.points_thresh, min_value=1, max_value=10,
+                               callback=set_neighbors)
+            dpg.add_slider_float(label='radius', default_value=Context.points_radius, min_value=0.1, max_value=5)
         
         dpg.add_separator()

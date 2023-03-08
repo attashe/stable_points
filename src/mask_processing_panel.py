@@ -52,18 +52,37 @@ def refine_render():
     
     image_filled = sum_colors.permute(0, 2, 3, 1).numpy()[0]
     
+    # Same thing for depthmask
+    # TODO: Think about optional depthmap editing, but this needs for controlnet consistency
+    depth = Context.rendered_depth[..., None] if len(Context.rendered_depth) == 2 else Context.rendered_depth
+    depth_conv = torch.tensor(depth, dtype=torch.float32)
+    depth_conv = torch.permute(depth_conv, (2, 0, 1)).unsqueeze(0)
+    
+    sum_depth = F.conv2d(depth_conv[:, 0, ...], kernel, padding=1)
+    
+    depth_filled = sum_depth.permute(0, 2, 3, 1).numpy()[0]
+
     # Fill image with mean of neighbors pixels in 3x3 window for each non zero pixel in image with count of non zero neighbors pixels in 3x3 window more than 0
     m = (mask_bin == 0) & (mask_count > 4)
     image[m] = image_filled[m] / (mask_count[m]).reshape(-1, 1)
     mask[m] = 0
+    depth[m] = depth_filled[m] / (mask_count[m]).reshape(-1, 1)
     
-    np.copyto(Context.rendered_image, image)
-    np.copyto(Context.mask, mask)
-
-    mask_img = Context.image_wrapper.mask2img(Context.mask)
-    Context.view_panel.update(render=Context.rendered_image, mask=mask_img)
+    # np.copyto(Context.rendered_image, image)
+    # np.copyto(Context.mask, mask)
+    update_depth_mask()
+    
     # np.copyto(Context.mask_data[..., 0], Context.mask.astype(np.float32) / 255)
     # np.copyto(Context.texture_data, Context.rendered_image.astype(np.float32) / 255)
+
+
+def update_depth_mask():
+    if Context.use_depthmap_instead_mask:
+        depth_img = Context.image_wrapper.depth2img(Context.rendered_depth)
+        Context.view_panel.update(render=Context.rendered_image, mask=depth_img)
+    else:
+        mask_img = Context.image_wrapper.mask2img(Context.mask)
+        Context.view_panel.update(render=Context.rendered_image, mask=mask_img)
 
 
 def depthmap_checker(sender):
@@ -73,8 +92,9 @@ def depthmap_checker(sender):
         Context.use_depthmap_instead_mask = True
     else:
         Context.use_depthmap_instead_mask = False
-        
-    update_render_view()
+
+    # update_render_view()
+    update_depth_mask()
 
 
 class MaskPanel:
@@ -93,13 +113,13 @@ class MaskPanel:
                     show_info("Error", "Kernel size must be odd")
                     return
 
+                Context.mask = erode_mask(Context.mask, kernel, iterations)
+                Context.rendered_depth = erode_mask(Context.rendered_depth, kernel, iterations)
                 iterations = dpg.get_value(iterations_cnt_erode)
                 if Context.use_depthmap_instead_mask:
-                    Context.rendered_depth = erode_mask(Context.rendered_depth, kernel, iterations)
                     depth_img = Context.image_wrapper.depth2img(Context.rendered_depth)
                     Context.view_panel.update(mask=depth_img)
                 else:
-                    Context.mask = erode_mask(Context.mask, kernel, iterations)
                     mask_img = Context.image_wrapper.mask2img(Context.mask)
                     Context.view_panel.update(mask=mask_img)
                 
@@ -121,12 +141,13 @@ class MaskPanel:
                     return
 
                 iterations = dpg.get_value(iterations_cnt_dilate)
+                Context.mask = dilate_mask(Context.mask, kernel, iterations)
+                Context.rendered_depth = dilate_mask(Context.rendered_depth, kernel, iterations)
+                
                 if Context.use_depthmap_instead_mask:
-                    Context.rendered_depth = dilate_mask(Context.rendered_depth, kernel, iterations)
                     depth_img = Context.image_wrapper.depth2img(Context.rendered_depth)
                     Context.view_panel.update(mask=depth_img)
                 else:
-                    Context.mask = dilate_mask(Context.mask, kernel, iterations)
                     mask_img = Context.image_wrapper.mask2img(Context.mask)
                     Context.view_panel.update(mask=mask_img)
                 # Context.mask = dilate_mask(Context.mask, kernel, iterations)
@@ -143,8 +164,16 @@ class MaskPanel:
                 hole_min_size = dpg.get_value(hole_min_size_slider)
                 Context.mask = 255 - close_small_holes(255 - Context.mask, hole_min_size)
                 Context.rendered_image[Context.mask != 0] = 0
-                np.copyto(Context.texture_data, Context.rendered_image.astype(np.float32) / 255)
-                np.copyto(Context.mask_data[..., 0], Context.mask.astype(np.float32) / 255)
+                Context.rendered_depth[Context.mask != 0] = 0
+                
+                if Context.use_depthmap_instead_mask:
+                    depth_img = Context.image_wrapper.depth2img(Context.rendered_depth)
+                    Context.view_panel.update(mask=depth_img)
+                else:
+                    mask_img = Context.image_wrapper.mask2img(Context.mask)
+                    Context.view_panel.update(mask=mask_img)
+                # np.copyto(Context.texture_data, Context.rendered_image.astype(np.float32) / 255)
+                # np.copyto(Context.mask_data[..., 0], Context.mask.astype(np.float32) / 255)
             
             dpg.add_button(label="Close", callback=close_holes_callback)
             
@@ -157,7 +186,7 @@ class MaskPanel:
                 
                 im_floodfill = mask.copy()
 
-                h, w = img.shape[:2]
+                h, w = image.shape[:2]
                 flood_mask = np.zeros((h+2, w+2), np.uint8)
                 
                 ret, imf, maskf, rect = cv2.floodFill(im_floodfill, flood_mask, (0,0), 255)
@@ -198,13 +227,20 @@ class MaskPanel:
             
             def smooth_mask_callback(sender, app_data):
                 Context.mask = smooth_mask(Context.mask, dpg.get_value(size_slider), dpg.get_value(sigma_slider))
-                np.copyto(Context.mask_data[..., 0], Context.mask.astype(np.float32) / 255)
+                # np.copyto(Context.mask_data[..., 0], Context.mask.astype(np.float32) / 255)
+                if Context.use_depthmap_instead_mask:
+                    show_info('Depthmap show', 'Cannot smoothing depthmap, transformation applied only for mask')
+                else:
+                    mask_img = Context.image_wrapper.mask2img(Context.mask)
+                    Context.view_panel.update(mask=mask_img)
             
             dpg.add_button(label='Smooth Mask', callback=smooth_mask_callback)
             
             def reset_mask_callback(sender, app_data):
                 Context.mask = (Context.rendered_depth == 0).astype(np.uint8) * 255
-                np.copyto(Context.mask_data[..., 0], Context.mask.astype(np.float32) / 255)
+                # np.copyto(Context.mask_data[..., 0], Context.mask.astype(np.float32) / 255)
+                mask_img = Context.image_wrapper.mask2img(Context.mask)
+                Context.view_panel.update(mask=mask_img)
             
             dpg.add_button(label='Reset mask', callback=reset_mask_callback)
             
