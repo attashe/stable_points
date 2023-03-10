@@ -27,7 +27,7 @@ class ImageWrapper():
         self.orig_image = image
         self.upscaled_image = upscale_image(self.orig_image, Context.upscale)
         
-        self._load_points()
+        self._load_points(self.upscaled_image)
         
         # h, w = self.orig_image.shape[:2]
         # Downscaled image
@@ -37,12 +37,12 @@ class ImageWrapper():
         
         self._setup_render()
         
-        self.init_render()
+        self._init_render()
         
         self.render_image()
         
     def _load_points(self, image):
-        self.points, self.colors = self._create_pointcloud(self.upscaled_image)
+        self.points, self.colors = self._create_pointcloud(image)
         
     def _setup_render(self):
         # if Context.image_height < Context.image_width:
@@ -69,7 +69,7 @@ class ImageWrapper():
         
     def reload_image(self):
         if Context.render is not None:
-            self._load_points()
+            self._load_points(self.upscaled_image)
             self._init_render()
             self.render_image()
     

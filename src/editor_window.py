@@ -94,20 +94,6 @@ def add_view_panel():
     Context.view_panel = ViewTriPanel()
 
 
-def add_view_widgets():
-    with dpg.child_window(parent='main_table_row', width=-1, height=-2, tag='render_window'):
-        # dpg.add_text("Render will be here")
-        dpg.add_image("render_tag", tag='render_image')
-    
-    with dpg.child_window(parent='main_table_row', width=-1, height=-2, tag='mask_window'):
-        # dpg.add_text("Mask for inpainting will be here")
-        dpg.add_image("mask_tag", tag='mask_image')
-    
-    with dpg.child_window(parent='main_table_row', width=-1, height=-2, tag='inpaint_window'):
-    #     # dpg.add_text("Inpaint result will be here")
-        dpg.add_image("inpaint_tag", tag='inpaint_image')
-
-
 def render_new_image(image):
     h, w = image.shape[:2]
     logger.info(f'Initial image size is {w}x{h}px')
@@ -155,6 +141,28 @@ def init_log_folder():
     Context.log_folder = str(log_path)
 
 
+def save_inpaint_callback(sender, app_data):
+    filename_image = Path(Context.log_folder) / ('image_' + str(Context.save_idx).zfill(5) + '.png')
+    filename_mask = Path(Context.log_folder) / ('mask_' + str(Context.save_idx).zfill(5) + '.png')
+    filename_inpaint = Path(Context.log_folder) / ('inpaint_' + str(Context.save_idx).zfill(5) + '.png')
+    
+    saved = 0    
+    if Context.rendered_image is not None:
+        Image.fromarray(Context.rendered_image).save(str(filename_image))
+        saved += 1
+    if Context.mask is not None:
+        Image.fromarray(Context.mask).save(str(filename_mask))
+        saved += 1
+    if Context.inpainted_image is not None:
+        Image.fromarray(Context.inpainted_image).save(str(filename_inpaint))
+        saved += 1
+    
+    logger.info(f'Saved {saved} images to {Context.log_folder} with index {Context.save_idx}')
+    
+    if saved > 0:
+        Context.save_idx += 1
+
+
 def main():
     logger.info("Starting program")
     
@@ -184,15 +192,9 @@ def main():
                     sd_widget = InpaintPanelWidget()
                         
                     dpg.add_separator()
-
-                    # Final buttons
-                    def reset_mask_callback(sender, app_data):
-                        Context.mask = (Context.rendered_depth == 0).astype(np.uint8) * 255
-                        np.copyto(Context.mask_data[..., 0], Context.mask.astype(np.float32) / 255)
                     
-                    dpg.add_button(label='Reset mask', callback=reset_mask_callback)
-                    
-                    dpg.add_separator()
+                    # Save results
+                    dpg.add_button(label='Save', tag='save', callback=save_inpaint_callback)
                     
                     dpg.add_button(label='Reset render', callback=restart_render_with_current_image_callback)
                     

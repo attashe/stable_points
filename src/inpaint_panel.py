@@ -12,28 +12,6 @@ from sd_scripts.inpaint import Inpainter, InpainterStandart
 from utils import show_info
 
 
-def save_inpaint_callback(sender, app_data):
-    filename_image = Path(Context.log_folder) / ('image_' + str(Context.save_idx).zfill(5) + '.png')
-    filename_mask = Path(Context.log_folder) / ('mask_' + str(Context.save_idx).zfill(5) + '.png')
-    filename_inpaint = Path(Context.log_folder) / ('inpaint_' + str(Context.save_idx).zfill(5) + '.png')
-    
-    saved = 0    
-    if Context.rendered_image is not None:
-        Image.fromarray(Context.rendered_image).save(str(filename_image))
-        saved += 1
-    if Context.mask is not None:
-        Image.fromarray(Context.mask).save(str(filename_mask))
-        saved += 1
-    if Context.inpainted_image is not None:
-        Image.fromarray(Context.inpainted_image).save(str(filename_inpaint))
-        saved += 1
-    
-    logger.info(f'Saved {saved} images to {Context.log_folder} with index {Context.save_idx}')
-    
-    if saved > 0:
-        Context.save_idx += 1
-
-
 class InpaintPanelWidget:
 
     def __init__(self) -> None:
@@ -78,8 +56,6 @@ class InpaintPanelWidget:
                                  default_value=0.7, min_value=0, max_value=1, format='%.2f')
             dpg.add_button(label='Run Img2Img model', tag='img2img_button', callback=self.img2img_api)
             
-            # Save results
-            dpg.add_button(label='Save', tag='save', callback=save_inpaint_callback)
     
     def init_api(self):
         dpg.bind_item_theme(self.color_button, self.button_yellow)
