@@ -92,7 +92,7 @@ class ImageWrapper():
         depth = depth.numpy()
         
         depth = depth.astype(np.float32)
-        data_depth = (depth - depth.min()) / (depth.max() - depth.min()) * Context.depthscale
+        data_depth = (depth - depth.min()) / (depth.max() - depth.min() + 1e-5) * Context.depthscale
         points_depth = data_depth.reshape(-1, 1)
         
         self.points[:, 2] = points_depth[:, 0]

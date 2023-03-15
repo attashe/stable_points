@@ -18,8 +18,8 @@ def update_focal_length(sender):
 def reset_camera():
     # TODO: function for reset camera position
     camera = Context.render.camera
-    camera.set_position(0, 0, - Context.image_height * 2)
-    camera.radius = 0.01# Context.image_height * Context.downscale
+    camera.set_position(0, 0, 0)
+    camera.radius = 0.01  # Context.image_height * Context.downscale
     camera.alpha = 0
     camera.beta = - np.pi / 2
     camera.theta = 0
@@ -53,6 +53,9 @@ class CameraPanelWidget:
         with dpg.group(label="Camera"):
         # with dpg.collapsing_header(label="Camera", default_open=True):
             dpg.add_button(label="Init Image Selector", callback=lambda: dpg.show_item("file_dialog_id"))
+            
+            dpg.add_checkbox(label='Use depth model', tag='use_depth_checkbox', 
+                             default_value=Context.use_depth_model , callback=self.use_depth_checker)
             
             dpg.add_text("focal length")
             focal_length_slider = dpg.add_slider_float(label="float_f", default_value=Context.focal_length, min_value=0.1, max_value=10)
@@ -104,3 +107,11 @@ class CameraPanelWidget:
             dpg.add_slider_float(label='radius', default_value=Context.points_radius, min_value=0.1, max_value=5)
         
         dpg.add_separator()
+
+    def use_depth_checker(self, sender):
+        val = dpg.get_value(sender)
+        logger.debug(f'Set use depth model to {val}')
+        if val:
+            Context.use_depth_model = True
+        else:
+            Context.use_depth_model = False

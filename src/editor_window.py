@@ -172,7 +172,7 @@ def main():
     dpg.create_context()
     
     with dpg.file_dialog(directory_selector=False, show=False, callback=image_select_callback, id="file_dialog_id",
-                         height=600, modal=True):
+                         height=600, width=800, modal=True):
         dpg.add_file_extension("Image files (*.png *.jpg *.bmp){.png,.jpg,.bmp}", color=(0, 255, 255, 255))
     
     with dpg.window(label="render", tag='main_window', autosize=True):

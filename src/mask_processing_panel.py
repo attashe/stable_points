@@ -54,11 +54,11 @@ def refine_render():
     
     # Same thing for depthmask
     # TODO: Think about optional depthmap editing, but this needs for controlnet consistency
-    depth = Context.rendered_depth[..., None] if len(Context.rendered_depth) == 2 else Context.rendered_depth
+    depth = Context.rendered_depth[..., None] if len(Context.rendered_depth.shape) == 2 else Context.rendered_depth
     depth_conv = torch.tensor(depth, dtype=torch.float32)
     depth_conv = torch.permute(depth_conv, (2, 0, 1)).unsqueeze(0)
     
-    sum_depth = F.conv2d(depth_conv[:, 0, ...], kernel, padding=1)
+    sum_depth = F.conv2d(depth_conv, kernel, padding=1)
     
     depth_filled = sum_depth.permute(0, 2, 3, 1).numpy()[0]
 

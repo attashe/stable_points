@@ -52,16 +52,34 @@ class InpaintPanelWidget:
             dpg.add_text('Img2Img settings')
             dpg.add_checkbox(label='Use ControlNet', tag='controlnet_checker',
                              default_value=Context.use_controlnet, callback=self.controlnet_checker)
+            dpg.add_combo(
+                    [Context.api_model_name,],
+                    tag='model_list_selector',
+                    callback=self.load_automatic_model_callback,
+                )
+            dpg.add_checkbox(label='Transform inpaint result', tag='transform_inpaint_checker',
+                             default_value=Context.transform_inpaint, callback=self.use_inpaint_checker)
             dpg.add_slider_float(label='denoising', tag='denoising_strength_slider',
                                  default_value=0.7, min_value=0, max_value=1, format='%.2f')
             dpg.add_button(label='Run Img2Img model', tag='img2img_button', callback=self.img2img_api)
-            
-    
+
     def init_api(self):
         dpg.bind_item_theme(self.color_button, self.button_yellow)
         Context.api = webuiapi.WebUIApi(host='127.0.0.1', port=7860)
         Context.api.util_set_model(Context.api_model_name)
+        
+        try:
+            models = Context.api.util_get_model_names()
+            dpg.configure_item('model_list_selector', items=models)
+        except Exception() as e:
+            show_info('Error', 'Cannot get list of Automatic models')
+            logger.error('Cannot get list of Automatic models')
         dpg.bind_item_theme(self.color_button, self.button_green)
+    
+    def load_automatic_model_callback(self, sender):
+        val = dpg.get_value(sender)
+        Context.api_model_name = val
+        Context.api.util_set_model(Context.api_model_name)
         
     def img2img_api(self):
         if Context.use_automatic_api == False:
@@ -69,6 +87,8 @@ class InpaintPanelWidget:
             return
         if Context.api is None:
             self.init_api()
+            
+        use_inpaint_result = Context.transform_inpaint
         
         seed = dpg.get_value('seed')
         prompt = dpg.get_value('prompt')
@@ -76,11 +96,18 @@ class InpaintPanelWidget:
         scale = dpg.get_value('scale')
         strength = dpg.get_value('denoising_strength_slider')
         
-        img_pil = Image.fromarray(Context.rendered_image)
+        if use_inpaint_result:
+            img_pil = Image.fromarray(Context.inpainted_image)
+        else:
+            img_pil = Image.fromarray(Context.rendered_image)
                 
         # unit1 = webuiapi.ControlNetUnit(input_image=img_pil, module='canny', model='control_canny-fp16 [e3fe7712]')
         unit2 = webuiapi.ControlNetUnit(input_image=img_pil, module='depth', model='control_depth-fp16 [400750f6]', weight=1.0)
         controlnets = [unit2,] if Context.use_controlnet else []
+        
+        logger.info(f'Start inference with automatic API with next parameters:')
+        logger.info(f'{prompt=}, {use_inpaint_result=}, {ddim_steps=}, {scale=}, {strength=}, {Context.use_controlnet=}, {seed=}')
+        logger.info(f'size = {Context.image_width}x{Context.image_height}')
         
         img2img_result = Context.api.img2img(prompt=prompt,
                     images=[img_pil], 
@@ -92,6 +119,7 @@ class InpaintPanelWidget:
                     steps=ddim_steps,
                     cfg_scale=scale,
                     seed=seed,
+                    eta=1.0,
                     denoising_strength=strength,
                 )
         res = np.array(img2img_result.image)
@@ -116,12 +144,13 @@ class InpaintPanelWidget:
             images=[Image.fromarray(Context.rendered_image)],
             mask_image=Image.fromarray(Context.mask),
             inpainting_fill=0,
+            width=Context.image_width,
+            height=Context.image_height,
             prompt=prompt,
             seed=seed,
             steps=ddim_steps,
             cfg_scale=scale,
-            width=Context.image_width,
-            height=Context.image_height,
+            eta=1.0,
             denoising_strength=1.0
         )
 
@@ -203,3 +232,11 @@ class InpaintPanelWidget:
             Context.use_controlnet = True
         else:
             Context.use_controlnet = False
+            
+    def use_inpaint_checker(self, sender):
+        val = dpg.get_value(sender)
+        logger.debug(f'Set inpaint checker to {val}')
+        if val:
+            Context.transform_inpaint = True
+        else:
+            Context.transform_inpaint = False

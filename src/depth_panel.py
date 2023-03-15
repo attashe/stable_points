@@ -190,7 +190,14 @@ class DepthPanel:
         logger.info(f'Depth model loaded in {time.time() - start_time} seconds')
         dpg.bind_item_theme(self.color_button, self.button_green)
 
+    def dummy_depth(self, img):
+        h, w = img.shape[:2]
+        return np.ones((h, w)) * 255
+        
     def predict_img(self, img):
+        if Context.use_depth_model == False:
+            return self.dummy_depth(img)
+
         if Context.depth_model is None:
             self.init_model()
         

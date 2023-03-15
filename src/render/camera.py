@@ -130,6 +130,13 @@ class ArcBallCamera(PerspectiveCamera):
             
         self.update_position_rotation()
         
+    def set_position(self, x_translate, y_translate, z_translate):
+        self.center[0] = x_translate
+        self.center[1] = y_translate
+        self.center[2] = z_translate
+        
+        self.update_position_rotation()
+        
     def update_position_rotation(self):
         self.x_translate = self.center[0] + self.radius * np.sin(self.alpha) * np.sin(self.beta)
         self.y_translate = self.center[1] + self.radius * np.cos(self.beta)

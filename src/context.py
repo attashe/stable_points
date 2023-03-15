@@ -37,12 +37,14 @@ class Context:
     use_controlnet = False
     api = None
     api_model_name = 'sd-v1-5-inpainting'
+    transform_inpaint = False
     
     # Remove alone points
     points_thresh = 3
     points_radius = 0.5
     
     ## Depth models settings
+    use_depth_model = True
     depth_type = 'midas'  # Default depth model type 'midas' | 'adabins' | 'leres'
     depth_model = None
     depth_resolution = 384
