@@ -57,7 +57,7 @@ For pointcloud rendering using pure pytorch render.
 ## Examples
 
 1. 3D camera movement
-![](/videos/test1.mp4)
+![](videos/test1.mp4)
 
 2. Img2Img with zoom example
 <video src='videos/test2.mp4' />
