@@ -6,9 +6,13 @@ This script create pointcloud from image and apply different transformation to c
 
 WIP interface preview:
 
-![WIP interface preview!](images/interface_preview_01.jpg "Interface and loaded image")
+![WIP interface previ
 
-![WIP video pipeline](videos/StablePointsShowcaseOpt1.mp4 "Pipeline for clip creation")
+https://user-images.githubusercontent.com/8243605/226091205-3267c067-43d5-4034-afc4-c38743785773.mov
+
+ew!](images/interface_preview_01.jpg "Interface and loaded image")
+
+
 
 This program uses Stable Diffusion Inpainting model for filling gaps caused by rotation camera. Depthmap is estimated by MiDaS model or LeReS.
 
@@ -58,11 +62,10 @@ For pointcloud rendering using pure pytorch render.
 
 1. 3D camera movement
 
-https://user-images.githubusercontent.com/8243605/226090749-7a507c9b-e9da-42fe-b10e-c99859827fd0.mp4
-
+https://user-images.githubusercontent.com/8243605/226091007-2b5d6f7b-c33a-4c4c-b207-73b4e4dc1b43.mov
 
 2. Img2Img with zoom example
 
-![](videos/test_1.mov)
+https://user-images.githubusercontent.com/8243605/226091187-29aec9ff-e6c8-4dcb-aa23-1d40c0037b66.mov
 
-![](/videos/test_1.mov)
+
