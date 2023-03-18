@@ -60,4 +60,4 @@ For pointcloud rendering using pure pytorch render.
 ![Example](videos/test1.mp4)
 
 2. Img2Img with zoom example
-videos/test2.mp4
+<video src='videos/test2.mp4' />
