@@ -63,4 +63,6 @@ https://user-images.githubusercontent.com/8243605/226090749-7a507c9b-e9da-42fe-b
 
 2. Img2Img with zoom example
 
-/videos/test_1.mp4
+![](videos/test_1.mov)
+
+![](/videos/test_1.mov)
