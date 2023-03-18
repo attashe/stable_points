@@ -39,8 +39,9 @@ class InpaintPanelWidget:
 
             # Add a inputs for inpainting parameters
             dpg.add_text("Inpainting parameters")
-            dpg.add_input_text(label='Prompt', tag='prompt', multiline=True, default_value='Naked Emma Watson in photo studio, Canon EOS 50mm')
-            dpg.add_input_int(label='seed', tag='seed', default_value=123, min_value=0, max_value=100000000)
+            dpg.add_input_text(label='Prompt', tag='prompt', multiline=True, default_value='Emma Watson portrait')
+            dpg.add_input_text(label='Negative prompt', tag='negative_prompt', multiline=True, default_value='blurry, ugly, malformed')
+            dpg.add_input_int(label='seed', tag='seed', default_value=1234, min_value=0, max_value=100000000)
             dpg.add_button(label='random seed',
                         callback=lambda _, __: dpg.set_value('seed', np.random.randint(0, 100000000)))
 
@@ -92,6 +93,7 @@ class InpaintPanelWidget:
         
         seed = dpg.get_value('seed')
         prompt = dpg.get_value('prompt')
+        negative_prompt = dpg.get_value('negative_prompt')
         ddim_steps = dpg.get_value('ddim_steps')
         scale = dpg.get_value('scale')
         strength = dpg.get_value('denoising_strength_slider')
@@ -110,6 +112,7 @@ class InpaintPanelWidget:
         logger.info(f'size = {Context.image_width}x{Context.image_height}')
         
         img2img_result = Context.api.img2img(prompt=prompt,
+                    negative_prompt=negative_prompt,
                     images=[img_pil], 
                     width=Context.image_width,
                     height=Context.image_height,
@@ -134,6 +137,7 @@ class InpaintPanelWidget:
         
         seed = dpg.get_value('seed')
         prompt = dpg.get_value('prompt')
+        negative_prompt = dpg.get_value('negative_prompt')
         ddim_steps = dpg.get_value('ddim_steps')
         scale = dpg.get_value('scale')
         
@@ -147,11 +151,13 @@ class InpaintPanelWidget:
             width=Context.image_width,
             height=Context.image_height,
             prompt=prompt,
+            negative_prompt=negative_prompt,
             seed=seed,
             steps=ddim_steps,
             cfg_scale=scale,
             eta=1.0,
-            denoising_strength=1.0
+            denoising_strength=1.0,
+            sampler_name='DDIM',
         )
 
         res = np.array(inpainting_result.image)

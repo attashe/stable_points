@@ -8,6 +8,8 @@ WIP interface preview:
 
 ![WIP interface preview!](images/interface_preview_01.jpg "Interface and loaded image")
 
+![WIP video pipeline](videos/StablePointsShowcaseOpt1.mp4 "Pipeline for clip creation")
+
 This program uses Stable Diffusion Inpainting model for filling gaps caused by rotation camera. Depthmap is estimated by MiDaS model or LeReS.
 
 For pointcloud rendering using pure pytorch render.
@@ -51,3 +53,11 @@ For pointcloud rendering using pure pytorch render.
 4. DearPyGUI
 5. OpenCV
 6. Automatic1111 API
+
+## Examples
+
+1. 3D camera movement
+![Example](videos/test1.mp4)
+
+2. Img2Img with zoom example
+![Example](videos/test2.mp4)
