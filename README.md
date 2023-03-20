@@ -1,17 +1,12 @@
-# GUI application for create animation with stable diffusion model
+# GUI application to create animations with stable diffusion model
 
-This script create pointcloud from image and apply different transformation to create series of images with camera movement.
+This script creates pointcloud from a single image applies different transformations to create animation controlled by camera movement.
 
 ## Showcase
 
 WIP interface preview:
 
-![WIP interface previ
-
 https://user-images.githubusercontent.com/8243605/226091205-3267c067-43d5-4034-afc4-c38743785773.mov
-
-ew!](images/interface_preview_01.jpg "Interface and loaded image")
-
 
 
 This program uses Stable Diffusion Inpainting model for filling gaps caused by rotation camera. Depthmap is estimated by MiDaS model or LeReS.
