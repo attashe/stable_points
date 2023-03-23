@@ -47,20 +47,27 @@ from mask_processing import *
 from render_panel import ViewTriPanel, update_render_view, ImageWrapper
 from depth_panel import DepthPanel
 from mask_processing_panel import MaskPanel
+from frames_panel import AnimationPanel
 
 
-def restart_render():
-    (Path(Context.log_folder) / "render").mkdir(exist_ok=True)
+def save_pil_image(path: Path, pil_image: Image.Image):
+    path.parent.mkdir(exist_ok=True, parents=True)
+    pil_image.save(str(path))
+
+
+def save_render(img_render):
     render_save_path = Path(Context.log_folder) / "render" / ('render_' + str(Context.render_image_idx).zfill(5) + '.png')
     
-    Image.fromarray(Context.inpainted_image).save(str(render_save_path))
+    save_pil_image(render_save_path, Image.fromarray(img_render))
     
     Context.image_path = render_save_path
+    Context.render_image_idx += 1
     
+
+def restart_render():
+    save_render(Context.inpainted_image)
     # load_image_file(Context.image_path)
     render_new_image(Context.inpainted_image)
-    
-    Context.render_image_idx += 1
 
 
 def restart_render_with_current_image_callback(sender, app_data):
@@ -110,6 +117,10 @@ def render_new_image(image):
 
 def load_image_file(image_path):
     image = open_image(image_path)
+    
+    # Save image as first frame
+    save_render(image)
+    
     render_new_image(image)
 
 
@@ -201,6 +212,10 @@ def main():
                     dpg.add_separator()
                     
                     Context.mask_panel = MaskPanel()
+                    
+                    dpg.add_separator()
+                    
+                    Context.animation_panel = AnimationPanel()
 
                 add_textures_zeros()
                 # add_view_widgets()

@@ -162,7 +162,7 @@ def create_pointcloud(image):
 
 def convert_from_uvd_numpy(points, depth, focal_length):
     # d = 1
-    focal_length = 2.0
+    focal_length = Context.upscale
     
     d = (depth[:, 0] + Context.near) * Context.depthscale
     # d = depth[:, 0]

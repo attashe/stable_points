@@ -3,11 +3,11 @@
 
 class Action:
     
-    def __init__(self) -> None:
-        pass
-    
-    def __call__(self):
-        raise Exception('Not implemented error')
+    def __init__(self, func):
+        self.function = func
+        
+    def run(self, state, params):
+        return self.function(state, params)
     
 
 class ActionBuilder(object):

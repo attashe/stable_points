@@ -42,7 +42,7 @@ class DepthModel():
             backbone="vitl16_384",
             non_negative=True,
         )
-        normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+        self.normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
 
         self.midas_transform = T.Compose([
             Resize(
@@ -53,7 +53,7 @@ class DepthModel():
                 resize_method="minimal",
                 image_interpolation_method=cv2.INTER_CUBIC,
             ),
-            normalization,
+            self.normalization,
             PrepareForNet()
         ])
 
@@ -62,6 +62,23 @@ class DepthModel():
             self.midas_model = self.midas_model.to(memory_format=torch.channels_last)
             self.midas_model = self.midas_model.half()
         self.midas_model.to(self.device)
+        
+    def set_resolution(self, resolution):
+        del self.midas_transform
+        
+        self.resolution = resolution
+        self.midas_transform = T.Compose([
+            Resize(
+                self.resolution, self.resolution,
+                resize_target=None,
+                keep_aspect_ratio=True,
+                ensure_multiple_of=32,
+                resize_method="minimal",
+                image_interpolation_method=cv2.INTER_CUBIC,
+            ),
+            self.normalization,
+            PrepareForNet()
+        ])
 
     def predict(self, img_cv2) -> torch.Tensor:
         w, h = img_cv2.shape[1], img_cv2.shape[0]

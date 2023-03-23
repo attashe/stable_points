@@ -46,6 +46,9 @@ def set_neighbors(sender, __):
 def set_radius(sender, __):
     Context.points_radius = dpg.get_value(sender)
 
+def upscale_callback(sender, __):
+    Context.upscale = dpg.get_value(sender)
+    logger.debug(f'Update upscale value to {Context.upscale}')
 
 class CameraPanelWidget:
     
@@ -53,6 +56,8 @@ class CameraPanelWidget:
         with dpg.group(label="Camera"):
         # with dpg.collapsing_header(label="Camera", default_open=True):
             dpg.add_button(label="Init Image Selector", callback=lambda: dpg.show_item("file_dialog_id"))
+            dpg.add_slider_float(label='Pointcloud upscale', default_value=2, min_value=1, max_value=3,
+                                 callback=upscale_callback)
             
             dpg.add_checkbox(label='Use depth model', tag='use_depth_checkbox', 
                              default_value=Context.use_depth_model , callback=self.use_depth_checker)

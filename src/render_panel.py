@@ -1,3 +1,4 @@
+import sys
 import time
 from pathlib import Path
 from loguru import logger
@@ -14,10 +15,14 @@ from image_panel import ImagePanel
 
 from render.render import Render
 # from depth_panel import init_depth
+# sys.path.append('repos/ResizeRight')
+from resize_right import resize_right
 
 def upscale_image(image, factor):
     h, w = image.shape[:2]
-    image = cv2.resize(image, (w * Context.upscale, h * Context.upscale))
+    image = cv2.resize(image, (int(w * Context.upscale), int(h * Context.upscale)), interpolation=cv2.INTER_LANCZOS4)
+    # image = resize_right.resize(image, out_shape=(w * Context.upscale, h * Context.upscale))
+    logger.debug(f'Image upscaled from {w}x{h} -> {image.shape[1]} x {image.shape[0]}')
     return image
 
 

@@ -178,7 +178,7 @@ class DepthPanel:
         del Context.depth_model
         Context.depth_model = None
         if Context.depth_type == 'midas':
-            Context.depth_model = DepthModel(device='cuda')
+            Context.depth_model = DepthModel(device='cuda', resolution=Context.depth_resolution)
             Context.depth_model.load_midas()
             self.loaded_model = 'midas'
         elif Context.depth_type == 'adabins':
@@ -202,6 +202,8 @@ class DepthPanel:
             self.init_model()
         
         if self.loaded_model == 'midas':
+            if Context.depth_model.resolution != Context.depth_resolution:
+                Context.depth_model.set_resolution(Context.depth_resolution)
             depth = Context.depth_model.predict(img)
             depth = depth.cpu().numpy()
         elif self.loaded_model == 'adabins':

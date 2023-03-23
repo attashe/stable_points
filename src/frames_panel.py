@@ -195,10 +195,22 @@ class AnimationMaker:
         pass
 
 
+class AnimationPanel:
+    
+    def __init__(self) -> None:
+        with dpg.collapsing_header(label='Interpolation Test'):
+            dpg.add_input_text(label='folder', tag='interp_text_input_tag', default_value='E:/GitHub/stable_points/output/run_36/')
+            dpg.add_input_int(label='frames', tag='inter_frames_input', default_value=3, min_value=1, max_value=10)
+            dpg.add_button(label='run_interpolation', callback=make_interpolation)
+            dpg.add_input_text(label='savefile', tag='savename_input', default_value='test.mp4')
+            dpg.add_input_int(label='fps', tag='fps_input', default_value=9, min_value=1, max_value=60)
+            dpg.add_button(label='Save animation', callback=save_animation)
+
+
 class FramesPanel:
     
     def __init__(self) -> None:
-        self.add_element()
+        pass
 
 
 model: FrameInterpolationModel = None

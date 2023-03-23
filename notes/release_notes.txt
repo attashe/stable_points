@@ -1,0 +1,11 @@
+0.0.9
+--------------------------------------
+
+- add code templates for Scenario running - automatic iterative keyframes creation
+- add slider for upscale parameters
+- fix MiDaS depth resolution
+- fix render updates for each keyboard press, only after camera movement
+- fix non-integer upscale
+- add panel for frames interpolation
+- add saving for first image frame (init_image) to /render folder
+- fix hardcoded focal_length in perspective conversion function

@@ -120,6 +120,8 @@ def on_key_press(sender, app_data):
                 elif app_data == dpg.mvKey_E:
                     logger.info('E')
                     decrease_camera_theta()
+                else:
+                    return
             elif control_mode == 'translate':
                 logger.debug('translate arcball camera')
                 if app_data == dpg.mvKey_W:
@@ -140,6 +142,8 @@ def on_key_press(sender, app_data):
                 elif app_data == dpg.mvKey_X:
                     logger.info('X')
                     decrease_camera_center_y()
+                else:
+                    return
             else:
                 raise ValueError(f'Unknown control mode {control_mode}')
         elif mode == 'turntable':
