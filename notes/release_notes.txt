@@ -9,3 +9,11 @@
 - add panel for frames interpolation
 - add saving for first image frame (init_image) to /render folder
 - fix hardcoded focal_length in perspective conversion function
+
+
+0.0.10
+--------------------------------------
+- add button for save inpainted image as new frame without reloading
+- add button for save rendered image as new frame
+- add gravity transform, move all points to center, that calculate as mean point
+- add vortex transform with noise parameters

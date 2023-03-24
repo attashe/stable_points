@@ -9,6 +9,7 @@ from tqdm import tqdm
 import torch
 import dearpygui.dearpygui as dpg
 
+from context import Context
 
 class Frame:
     
@@ -147,8 +148,8 @@ class FrameInterpolationModel:
         for frame in frames:
             writer.write(frame)
 
-        for frame in frames[1:][::-1]:
-            writer.write(frame)
+        # for frame in frames[1:][::-1]:
+        #     writer.write(frame)
 
         writer.release()
 
@@ -198,8 +199,8 @@ class AnimationMaker:
 class AnimationPanel:
     
     def __init__(self) -> None:
-        with dpg.collapsing_header(label='Interpolation Test'):
-            dpg.add_input_text(label='folder', tag='interp_text_input_tag', default_value='E:/GitHub/stable_points/output/run_36/')
+        with dpg.collapsing_header(label='Create animation'):
+            # dpg.add_input_text(label='folder', tag='interp_text_input_tag', default_value='E:/GitHub/stable_points/output/run_36/')
             dpg.add_input_int(label='frames', tag='inter_frames_input', default_value=3, min_value=1, max_value=10)
             dpg.add_button(label='run_interpolation', callback=make_interpolation)
             dpg.add_input_text(label='savefile', tag='savename_input', default_value='test.mp4')
@@ -221,7 +222,8 @@ def make_interpolation(sender):
     if model is None:
         model = FrameInterpolationModel('J:/Weights/FILM-pytorch/film_net_fp16.pt')
         
-    folder = dpg.get_value('interp_text_input_tag')
+    # folder = dpg.get_value('interp_text_input_tag')
+    folder = os.path.join(Context.log_folder, "render")
     inter_frames = dpg.get_value('inter_frames_input')
     
     imgs = [img for img in os.listdir(folder) if img.startswith('render')]

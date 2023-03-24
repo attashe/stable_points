@@ -48,6 +48,7 @@ from render_panel import ViewTriPanel, update_render_view, ImageWrapper
 from depth_panel import DepthPanel
 from mask_processing_panel import MaskPanel
 from frames_panel import AnimationPanel
+from pcl_transform_panel import PCLTransformPanel
 
 
 def save_pil_image(path: Path, pil_image: Image.Image):
@@ -152,7 +153,7 @@ def init_log_folder():
     Context.log_folder = str(log_path)
 
 
-def save_inpaint_callback(sender, app_data):
+def save_debug_callback(sender, app_data):
     filename_image = Path(Context.log_folder) / ('image_' + str(Context.save_idx).zfill(5) + '.png')
     filename_mask = Path(Context.log_folder) / ('mask_' + str(Context.save_idx).zfill(5) + '.png')
     filename_inpaint = Path(Context.log_folder) / ('inpaint_' + str(Context.save_idx).zfill(5) + '.png')
@@ -172,6 +173,18 @@ def save_inpaint_callback(sender, app_data):
     
     if saved > 0:
         Context.save_idx += 1
+
+
+def save_render_callback(sender, app_data):
+    save_render(Context.rendered_image)
+    
+
+def save_depth_callback(sender, app_data):
+    save_render(Context.rendered_depth)
+
+
+def save_inpaint_callback(sender, app_data):
+    save_render(Context.inpainted_image)
 
 
 def main():
@@ -205,7 +218,12 @@ def main():
                     dpg.add_separator()
                     
                     # Save results
-                    dpg.add_button(label='Save', tag='save', callback=save_inpaint_callback)
+                    dpg.add_text('Save as new frame')
+                    with dpg.group(horizontal=True):
+                        dpg.add_button(label='Render', tag='save_render', callback=save_render_callback)
+                        dpg.add_button(label='Inpaint', tag='save_inpaint', callback=save_inpaint_callback)
+                    
+                    dpg.add_button(label='Debug saving', tag='save_debug', callback=save_debug_callback)
                     
                     dpg.add_button(label='Reset render', callback=restart_render_with_current_image_callback)
                     
@@ -216,6 +234,10 @@ def main():
                     dpg.add_separator()
                     
                     Context.animation_panel = AnimationPanel()
+                    
+                    dpg.add_separator()
+                    
+                    Context.pcl_transform_panel = PCLTransformPanel()
 
                 add_textures_zeros()
                 # add_view_widgets()
