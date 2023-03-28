@@ -44,6 +44,38 @@ def init_depth():
 def calculate_depth(image) -> np.ndarray:
     pass
 
+def remove_percent_points(points, threshold, lower_bound=True) -> tuple[np.ndarray, np.ndarray]:
+    percentile = np.percentile(points[:, 2], 100 - threshold * 100)
+    
+    if lower_bound:
+        indices = points[:, 2] >= percentile
+    else:
+        indices = points[:, 2] < percentile
+        
+    return points[indices], indices
+
+def depth_threshold_callback(sender):
+    value = dpg.get_value(sender)
+    logger.debug(f'Change depth threshold to {value}')
+    Context.depth_thresh = value
+
+def remove_foreground_callback(sender):
+    points, indices = remove_percent_points(Context.render.points, Context.depth_thresh, lower_bound=True)
+    
+    Context.render.points = points
+    Context.render.colors = Context.render.colors[indices]
+    
+    update_render_view()
+
+def remove_background_callback(sender):
+    points, indices = remove_percent_points(Context.render.points, Context.depth_thresh, lower_bound=False)
+    
+    Context.render.points = points
+    Context.render.colors = Context.render.colors[indices]
+    
+    update_render_view()
+
+
 class DepthPanel:
     
     def __init__(self) -> None:
@@ -92,6 +124,15 @@ class DepthPanel:
                 dpg.add_button(label='Load Model', tag='load_depthmodel_button_tag', callback=self.load_model_callback)
                 self.color_button = dpg.add_button(label='   ')
                 dpg.bind_item_theme(self.color_button, self.button_yellow)
+            
+            dpg.add_separator()
+            dpg.add_text('Remove fore/background')
+            dpg.add_slider_float(label='Threshold', min_value=0.0, max_value=1.0, default_value=Context.depth_thresh,
+                                 callback=depth_threshold_callback)
+            
+            with dpg.group(horizontal=True):
+                dpg.add_button(label='Remove Background', callback=remove_background_callback)
+                dpg.add_button(label='Remove Foreground', callback=remove_foreground_callback)
             
             dpg.add_separator()
             dpg.add_text('Depth gamma correction')

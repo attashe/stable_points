@@ -18,10 +18,10 @@ class DpgNodeABC(metaclass=ABCMeta):
         self,
         parent,
         node_id,
-        pos,
-        width,
-        height,
-        opencv_setting_dict,
+        pos=[0, 0],
+        width=None,
+        height=None,
+        opencv_setting_dict={},
     ):
         pass
 

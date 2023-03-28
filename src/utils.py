@@ -184,3 +184,8 @@ def convert_from_uvd_numpy(points, depth, focal_length):
     
     points = np.stack((x, y, z), axis=1)
     return points
+
+
+def save_pil_image(path: Path, pil_image: Image.Image):
+    path.parent.mkdir(exist_ok=True, parents=True)
+    pil_image.save(str(path))

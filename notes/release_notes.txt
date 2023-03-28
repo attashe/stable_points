@@ -17,3 +17,42 @@
 - add button for save rendered image as new frame
 - add gravity transform, move all points to center, that calculate as mean point
 - add vortex transform with noise parameters
+
+
+0.0.11 (planned), test scenario
+--------------------------------------
+- add versions plan
+- add chaos_fraction parameter for numpy vortex transform
+- add background/foreground selection with depth model
+- add vortex pipeline for prove that idea working
+[] - add automatic running scenarios with generation intermediate frames
+[] = add pipeline for infinite zoom out
+[] - fix circular import problem with saving functions
+[] - add interpolation READY indicator
+[] - create animation without interpolation
+[] - find another interpolation library
+[] - Node for selection background/foreground mask
+[] - Node for blending image with mask
+
+0.0.12 (planned), big nodes editor update
+--------------------------------------
+[] - add nodes:
+    [] - depth estimation: MiDaS and LeReS
+    [] - render image
+    [] - camera transformation
+    [] - mask processing
+    [] - save frame
+[] - add interface for typical using scenario with load image, render, camera transform, mask dilation, mask smooth,
+    inpaint, and saving frame
+
+
+0.1.0 (planned), first alpha release
+--------------------------------------
+[] - code refactoring
+[] - separate Engine and GUI
+[] - separate code to different window, with pipelines and render
+[] - finish pipeline for scenario running
+[] - write documentation
+[] - add links to articles and sources
+[] - add INSTALL.md instructions
+[] - fix some TODOs

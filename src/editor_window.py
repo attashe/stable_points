@@ -38,7 +38,7 @@ from render.render import Render
 # from inpaint import Inpainter, InpainterStandart
 
 from context import Context
-from utils import show_info, open_image, create_pointcloud, convert_from_uvd_numpy
+from utils import show_info, open_image, create_pointcloud, convert_from_uvd_numpy, save_pil_image
 from inpaint_panel import InpaintPanelWidget
 from camera_panel import CameraPanelWidget
 from keyboard_controller import on_key_press
@@ -49,11 +49,8 @@ from depth_panel import DepthPanel
 from mask_processing_panel import MaskPanel
 from frames_panel import AnimationPanel
 from pcl_transform_panel import PCLTransformPanel
-
-
-def save_pil_image(path: Path, pil_image: Image.Image):
-    path.parent.mkdir(exist_ok=True, parents=True)
-    pil_image.save(str(path))
+from pipelines import ScenarioPanel
+from node_panel import NodeEditorPanel, NodeEditorView
 
 
 def save_render(img_render):
@@ -238,10 +235,21 @@ def main():
                     dpg.add_separator()
                     
                     Context.pcl_transform_panel = PCLTransformPanel()
+                    
+                    dpg.add_separator()
+                    
+                    Context.scenario_panel = ScenarioPanel()
+                    
+                    dpg.add_separator()
+                    
+                    Context.node_etitor_panel = NodeEditorPanel()
 
                 add_textures_zeros()
                 # add_view_widgets()
-                add_view_panel()
+                with dpg.group(label="ViewPanel"):
+                    add_view_panel()
+                    
+                    dpg.node_editor_view = NodeEditorView()
     
     with dpg.handler_registry():
         dpg.add_key_press_handler(callback=on_key_press)

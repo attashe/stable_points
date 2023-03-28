@@ -61,6 +61,7 @@ class Context:
     rescale_depth = True
     perspective_func = 'l1'  # 'l1' or 'l2'
     use_depthmap_instead_mask = False
+    depth_thresh = 0.5
     
     ## Camera settings
     alpha_step = 0.01

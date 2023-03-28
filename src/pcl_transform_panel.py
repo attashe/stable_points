@@ -1,3 +1,4 @@
+import torch
 import numpy as np
 import dearpygui.dearpygui as dpg
 
@@ -8,7 +9,8 @@ from context import Context
 from render_panel import update_render_view
 
 
-def transform_pointcloud_with_vortex(pointcloud, xc, yc, zc, vortex_strength, chaos=0, rotate_axis=1):
+# TODO: Add chaos_fraction parameter
+def transform_pointcloud_with_vortex(pointcloud, xc, yc, zc, vortex_strength, chaos=0, rotate_axis=1, chaos_fraction=1.0):
     # Shift point cloud to center at (xc, yc, zc)
     centered_pointcloud = pointcloud - np.array([xc, yc, zc])
     
@@ -31,8 +33,11 @@ def transform_pointcloud_with_vortex(pointcloud, xc, yc, zc, vortex_strength, ch
     if chaos != 0:
         chaos_x = np.random.uniform(-chaos, chaos, size=pointcloud.shape[0])
         chaos_y = np.random.uniform(-chaos, chaos, size=pointcloud.shape[0])
-        transformed_radius += chaos_x
-        transformed_angle += chaos_y
+        
+        chaos_nonzero = np.random.rand(chaos_x) > chaos_fraction
+        
+        transformed_radius += chaos_x * chaos_nonzero
+        transformed_angle += chaos_y * chaos_nonzero
     
     transformed_z = centered_pointcloud[:, 2]
     
@@ -54,10 +59,8 @@ def transform_pointcloud_with_vortex(pointcloud, xc, yc, zc, vortex_strength, ch
     
     return transformed_pointcloud
 
-
-import torch
-
-def transform_pointcloud_with_vortex_torch(pointcloud, xc, yc, zc, vortex_strength, chaos=0, rotate_axis=1, device='cpu'):
+def transform_pointcloud_with_vortex_torch(pointcloud, xc, yc, zc, vortex_strength,
+                                           chaos=0, rotate_axis=1, chaos_fraction=1.0, device='cpu'):
     # Convert point cloud to PyTorch tensor
     pointcloud = torch.tensor(pointcloud, device=device).float()
     center = torch.tensor([xc, yc, zc], device=pointcloud.device).float()
@@ -77,15 +80,18 @@ def transform_pointcloud_with_vortex_torch(pointcloud, xc, yc, zc, vortex_streng
     angle = torch.atan2(centered_pointcloud[:, 1], centered_pointcloud[:, 0])
     
     # Apply vortex transformation to each point
-    transformed_radius = radius + vortex_strength * centered_pointcloud[:, 2]
-    transformed_angle = angle + vortex_strength * radius
+    transformed_radius = radius  # + vortex_strength * centered_pointcloud[:, 2]
+    transformed_angle = angle + vortex_strength  # * radius
     
     # Add chaos to the transformation
     if chaos != 0:
         chaos_x = torch.rand(pointcloud.shape[0], device=pointcloud.device) * (2*chaos) - chaos
         chaos_y = torch.rand(pointcloud.shape[0], device=pointcloud.device) * (2*chaos) - chaos
-        transformed_radius += chaos_x
-        transformed_angle += chaos_y
+        
+        chaos_nonzero = torch.rand_like(chaos_x) < chaos_fraction
+        
+        transformed_radius += chaos_x * chaos_nonzero
+        transformed_angle += chaos_y * chaos_nonzero
     
     transformed_z = centered_pointcloud[:, 2]
     
@@ -119,7 +125,10 @@ def vortex_slider_callback(sender):
     Context.vortex_strength = dpg.get_value(sender)
     
 def chaos_slider_callback(sender):
-    Context.chaos_coef = dpg.get_value(sender)
+    Context.chaos_strength = dpg.get_value(sender)
+
+def chaos_frac_slider_callback(sender):
+    Context.chaos_fraction = dpg.get_value(sender)
 
 
 class PCLTransformPanel:
@@ -127,21 +136,26 @@ class PCLTransformPanel:
     def __init__(self) -> None:
         Context.gravity_force = 0.1
         Context.vortex_strength = 1.0
-        Context.chaos_coef = 0.0
+        Context.chaos_strength = 0.0
+        Context.chaos_fraction = 1.0
         
         self.use_torch = True
         
         with dpg.collapsing_header(label='Pointcloud transformation'):
+            dpg.add_text(label='Gravity transform')
             dpg.add_slider_float(label='Gravity force', default_value=Context.gravity_force, min_value=-1.0, max_value=1.0,
                                  tag='gravity_force_slider', callback=gravity_slider_callback)
-            dpg.add_button(label='Gravity transform', callback=self.gravity_transform)
+            dpg.add_button(label='Run', callback=self.gravity_transform)
             
+            dpg.add_text(label='Vortex transform')
             dpg.add_slider_float(label='Vortex strength', default_value=Context.vortex_strength, min_value=0.0, max_value=5.0,
                                  tag='vortex_strength_slider', callback=vortex_slider_callback)
-            dpg.add_slider_float(label='Chaos', default_value=Context.chaos_coef, min_value=0.0, max_value=1.0,
+            dpg.add_slider_float(label='Chaos force', default_value=Context.chaos_strength, min_value=0.0, max_value=10.0,
                                  tag='chaos_slider', callback=chaos_slider_callback)
+            dpg.add_slider_float(label='Chaos %', default_value=Context.chaos_fraction, min_value=0.0, max_value=1.0,
+                                 tag='chaos_frac_slider', callback=chaos_frac_slider_callback)
             dpg.add_combo(['x', 'y', 'z'], default_value='y', label='Rotation axis', tag='axis_selector')
-            dpg.add_button(label='Vortex transform', callback=self.vortex_transform)
+            dpg.add_button(label='Run', callback=self.vortex_transform)
             
     def gravity_transform(self, sender):
         pointcloud = Context.render.points.copy()
@@ -165,23 +179,25 @@ class PCLTransformPanel:
         center = pointcloud.mean(axis=0)
         logger.debug(f'{center=}')
         vortex_strength = Context.vortex_strength / 100
-        chaos_coef = Context.chaos_coef
+        chaos_strength = Context.chaos_strength
+        chaos_fraction = Context.chaos_fraction
         
         axis_map = {'x': 0, 'y': 1, 'z': 2}
         axis = axis_map[dpg.get_value('axis_selector')]
         
         logger.debug(f'{Context.render.points.sum()}')
         logger.debug(f'{vortex_strength=}')
-        logger.debug(f'{chaos_coef=}')
+        logger.debug(f'{chaos_strength=}')
         
         # numpy version
         if self.use_torch:
             Context.render.points = transform_pointcloud_with_vortex_torch(pointcloud, center[0], center[1], center[2],
-                                                                           vortex_strength=vortex_strength, chaos=chaos_coef,
-                                                                           rotate_axis=axis, device='cuda')
+                                                                           vortex_strength=vortex_strength, chaos=chaos_strength,
+                                                                           rotate_axis=axis, chaos_fraction=chaos_fraction,
+                                                                           device='cuda')
         else:
             Context.render.points = transform_pointcloud_with_vortex(pointcloud, center[0], center[1], center[2],
-                                                                    vortex_strength=vortex_strength, chaos=chaos_coef,
+                                                                    vortex_strength=vortex_strength, chaos=chaos_strength,
                                                                     rotate_axis=axis)
         logger.debug(f'{Context.render.points.sum()}')
         update_render_view()
