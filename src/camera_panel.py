@@ -110,6 +110,16 @@ class CameraPanelWidget:
             dpg.add_slider_int(label='neighbors', default_value=Context.points_thresh, min_value=1, max_value=10,
                                callback=set_neighbors)
             dpg.add_slider_float(label='radius', default_value=Context.points_radius, min_value=0.1, max_value=5)
+            
+            dpg.add_separator()
+            # Pad and crop controls
+            # TODO: Finish this controls
+            dpg.add_text("Pad & Crop")
+            dpg.add_text("Up, Down, Left, Right")
+            with dpg.group(horizontal=True):
+                dpg.add_input_intx()
+                dpg.add_button(label='Apply')
+                # dpg.add_input_intx(label='Left, Right')
         
         dpg.add_separator()
 

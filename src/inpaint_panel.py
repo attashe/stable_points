@@ -9,7 +9,7 @@ from pathlib import Path
 
 from context import Context
 from sd_scripts.inpaint import Inpainter, InpainterStandart
-from utils import show_info
+from utils import show_info, split_grid, combine_grid
 
 
 class InpaintPanelWidget:
@@ -35,6 +35,12 @@ class InpaintPanelWidget:
                 self.color_button = dpg.add_button(label='   ')
                 dpg.bind_item_theme(self.color_button, self.button_yellow)
 
+            dpg.add_checkbox(label='tiling inpaint', default_value=Context.tiling_inpaint,
+                             callback=self.tiling_callback)
+            dpg.add_slider_int(label='Tile size', default_value=Context.tile_size,
+                               min_value=512, max_value=1024, callback=self.tile_size_slider_callback)
+            dpg.add_slider_int(label='Tile overlap', default_value=Context.tile_overlap,
+                               min_value=0, max_value=384, callback=self.tile_overlap_slider_callback)
             dpg.add_button(label="Inpaint", callback=self.inpaint_callback)
 
             # Add a inputs for inpainting parameters
@@ -76,6 +82,24 @@ class InpaintPanelWidget:
             show_info('Error', 'Cannot get list of Automatic models')
             logger.error('Cannot get list of Automatic models')
         dpg.bind_item_theme(self.color_button, self.button_green)
+    
+    def tiling_callback(self, sender):
+        val = dpg.get_value(sender)
+        Context.tiling_inpaint = val
+        
+    def tile_size_slider_callback(self, sender):
+        val = dpg.get_value(sender)
+        val_fix = val - val % 64
+        logger.debug('Tile size set to {val_fix}, rounded from {val}')
+        dpg.set_value(sender, val_fix)
+        Context.tile_size = val_fix
+        
+    def tile_overlap_slider_callback(self, sender):
+        val = dpg.get_value(sender)
+        val_fix = val - val % 32
+        logger.debug('Tile overlap set to {val_fix}, rounded from {val}')
+        dpg.set_value(sender, val_fix)
+        Context.tile_overlap = val_fix
     
     def load_automatic_model_callback(self, sender):
         val = dpg.get_value(sender)
@@ -133,7 +157,6 @@ class InpaintPanelWidget:
     def automatic_inference(self):
         if Context.api is None:
             self.init_api()
-            return
         
         seed = dpg.get_value('seed')
         prompt = dpg.get_value('prompt')
@@ -196,10 +219,41 @@ class InpaintPanelWidget:
         print(inpaint_mask.shape)
         print(type(inpaint_mask))
         
-        results = Context.inpainter.inpaint(Image.fromarray(image_resized), Image.fromarray(inpaint_mask), prompt,
-                                seed, scale, ddim_steps, num_samples, w=new_w, h=new_h)
-        
-        res = np.array(results[0])
+        if Context.tiling_inpaint:
+            image_resized = Image.fromarray(image_resized)
+            inpaint_mask = Image.fromarray(inpaint_mask)
+            
+            grid_image = split_grid(image_resized, tile_w=Context.tile_size,
+                                    tile_h=Context.tile_size, overlap=Context.tile_overlap)
+            
+            grid_mask = split_grid(inpaint_mask, tile_w=Context.tile_size,
+                                   tile_h=Context.tile_size, overlap=Context.tile_overlap)
+            
+            work_results = []
+            for (y, h, row_img), (y1, h1, row_mask) in zip(grid_image.tiles, grid_mask.tiles):
+                for tiledata_img, tiledata_mask in zip(row_img, row_mask):
+                    # work.append(tiledata_img[2], tiledata_mask[2])
+                    result = Context.inpainter.inpaint(
+                        tiledata_img[2], tiledata_mask[2],
+                        prompt, seed, scale, ddim_steps, num_samples,
+                        w=Context.tile_size, h=Context.tile_size)
+                    
+                    work_results += result
+            
+            image_index = 0
+            for y, h, row in grid_image.tiles:
+                for tiledata in row:
+                    tiledata[2] = work_results[image_index] if image_index < len(work_results) else Image.new("RGB", (p.width, p.height))
+                    image_index += 1
+
+            combined_image = combine_grid(grid_image)
+            res = np.array(combined_image)
+        else:
+            results = Context.inpainter.inpaint(Image.fromarray(image_resized), Image.fromarray(inpaint_mask),
+                        prompt, seed, scale, ddim_steps, num_samples, w=new_w, h=new_h)
+            
+            res = np.array(results[0])
+
         res = cv2.resize(res, (Context.image_width, Context.image_height), interpolation=cv2.INTER_LANCZOS4)
         Context.inpainted_image = res
         

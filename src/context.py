@@ -38,6 +38,9 @@ class Context:
     api = None
     api_model_name = 'sd-v1-5-inpainting'
     transform_inpaint = False
+    tiling_inpaint = False
+    tile_size = 512
+    tile_overlap = 128
     
     # Remove alone points
     points_thresh = 3
@@ -97,3 +100,6 @@ class Context:
     inpainted_image = None
     
     mask = None
+    
+    # Animation settings
+    revers_mode = False

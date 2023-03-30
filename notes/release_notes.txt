@@ -25,6 +25,37 @@
 - add chaos_fraction parameter for numpy vortex transform
 - add background/foreground selection with depth model
 - add vortex pipeline for prove that idea working
+
+
+0.0.12 (planned), utility upadte
+--------------------------------------
+- add reverse animation option
+- tiling inpaint inference
+
+0.0.13 (planned), rotation&crop upadte
+--------------------------------------
+[] - add true arcball camera for rotate image
+[] - add upscale option
+[] - reorganize render and utilities code
+    Так как после апскейла изображение будет другого размера, чем в текстуре для отображения
+    То необходимо сделать разницу между выходным разрешением и хранимым
+[] - add cropping image function
+
+0.0.14 (planned), Video update
+--------------------------------------
+Video update:
+[] - add video stylization window
+[] - load video
+[] - render video frame by frame
+[] - add frame skip options - make this for better perfomance
+[] - img2img with controlnet
+[] - add Optical Flow Warp
+[] - deflickering
+
+
+0.0.15 (planned), Scenarios update
+--------------------------------------
+
 [] - add automatic running scenarios with generation intermediate frames
 [] = add pipeline for infinite zoom out
 [] - fix circular import problem with saving functions
@@ -34,7 +65,7 @@
 [] - Node for selection background/foreground mask
 [] - Node for blending image with mask
 
-0.0.12 (planned), big nodes editor update
+0.0.13 (planned), big nodes editor update
 --------------------------------------
 [] - add nodes:
     [] - depth estimation: MiDaS and LeReS
@@ -56,3 +87,31 @@
 [] - add links to articles and sources
 [] - add INSTALL.md instructions
 [] - fix some TODOs
+
+
+--------------------------------------
+
+Примечания:
+
+Как реализовать NodeEditor:
+При старте программы есть только ноды Start и End, после чего пользователь может добавить ноды так, чтобы
+соединить Start и End, указав в стартовой ноде количество повторений.
+При добавлении каждой новой ноды, она добавляется в общий список нод, то же самое и с каждой добавленной связью.
+При нажатии на исполнение 
+
+--------------------------------------
+Known bugs:
+
+При img2img with automatic api изображений с отличными от кратных 2 измерениями возникает несовместимость
+размеров с рендером из-за различия в округлении. Ошибка возникает уже после выполнения операции при попытке
+обновить окно отображения
+
+Traceback (most recent call last):
+  File "E:\GitHub\stable_points\src\inpaint_panel.py", line 155, in img2img_api
+    Context.view_panel.update(inpaint=Context.inpainted_image)
+  File "E:\GitHub\stable_points\src\render_panel.py", line 146, in update
+    self.inpaint_image.set_image(inpaint)
+  File "E:\GitHub\stable_points\src\image_panel.py", line 30, in set_image
+    np.copyto(self.image_data, image.astype(np.float32) / 255)
+  File "<__array_function__ internals>", line 180, in copyto
+ValueError: could not broadcast input array from shape (224,456,3) into shape (231,457,3)

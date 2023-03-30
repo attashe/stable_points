@@ -9,6 +9,8 @@ from tqdm import tqdm
 import torch
 import dearpygui.dearpygui as dpg
 
+from loguru import logger
+
 from context import Context
 
 class Frame:
@@ -145,8 +147,13 @@ class FrameInterpolationModel:
         w, h = frames[0].shape[1::-1]
         fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
         writer = cv2.VideoWriter(outpath, fourcc, fps, (w, h))
-        for frame in frames:
-            writer.write(frame)
+        
+        if Context.revers_mode:
+            for frame in frames[::-1]:
+                writer.write(frame)
+        else:
+            for frame in frames:
+                writer.write(frame)
 
         # for frame in frames[1:][::-1]:
         #     writer.write(frame)
@@ -196,6 +203,11 @@ class AnimationMaker:
         pass
 
 
+def reverse_callback(sender):
+    val = dpg.get_value(sender)
+    logger.debug(f'reverse mode changed to {val}')
+    Context.revers_mode = val
+
 class AnimationPanel:
     
     def __init__(self) -> None:
@@ -205,6 +217,8 @@ class AnimationPanel:
             dpg.add_button(label='run_interpolation', callback=make_interpolation)
             dpg.add_input_text(label='savefile', tag='savename_input', default_value='test.mp4')
             dpg.add_input_int(label='fps', tag='fps_input', default_value=9, min_value=1, max_value=60)
+            dpg.add_checkbox(label='Reverse animation', tag='reverse_checkbox', 
+                             default_value=Context.revers_mode, callback=reverse_callback)
             dpg.add_button(label='Save animation', callback=save_animation)
 
 

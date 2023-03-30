@@ -60,6 +60,10 @@ def save_render_action():
     Context.render_image_idx += 1
 
 
+def play_video(self):
+    pass
+
+
 class ScenarioPanel:
     
     def __init__(self) -> None:

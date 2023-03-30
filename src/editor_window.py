@@ -217,8 +217,8 @@ def main():
                     # Save results
                     dpg.add_text('Save as new frame')
                     with dpg.group(horizontal=True):
-                        dpg.add_button(label='Render', tag='save_render', callback=save_render_callback)
-                        dpg.add_button(label='Inpaint', tag='save_inpaint', callback=save_inpaint_callback)
+                        dpg.add_button(label='Save Render', tag='save_render', callback=save_render_callback)
+                        dpg.add_button(label='Save Inpaint', tag='save_inpaint', callback=save_inpaint_callback)
                     
                     dpg.add_button(label='Debug saving', tag='save_debug', callback=save_debug_callback)
                     
