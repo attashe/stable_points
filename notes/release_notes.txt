@@ -31,17 +31,9 @@
 --------------------------------------
 - add reverse animation option
 - tiling inpaint inference
-
-0.0.13 (planned), rotation&crop upadte
---------------------------------------
-[] - add true arcball camera for rotate image
-[] - add upscale option
-[] - reorganize render and utilities code
-    Так как после апскейла изображение будет другого размера, чем в текстуре для отображения
-    То необходимо сделать разницу между выходным разрешением и хранимым
 [] - add cropping image function
 
-0.0.14 (planned), Video update
+0.0.13 (planned), Video update
 --------------------------------------
 Video update:
 [] - add video stylization window
@@ -51,6 +43,14 @@ Video update:
 [] - img2img with controlnet
 [] - add Optical Flow Warp
 [] - deflickering
+
+0.0.14 (planned), rotation&crop upadte
+--------------------------------------
+[] - add true arcball camera for rotate image
+[] - add upscale option
+[] - reorganize render and utilities code
+    Так как после апскейла изображение будет другого размера, чем в текстуре для отображения
+    То необходимо сделать разницу между выходным разрешением и хранимым
 
 
 0.0.15 (planned), Scenarios update

@@ -359,6 +359,7 @@ class NodeEditorPanel:
             dpg.add_button(label='Run', callback=self.run_scenario)
     
     def add_node(self, sender):
+        # https://www.reddit.com/r/DearPyGui/comments/sh410p/how_to_spawn_new_nodes_in_the_node_editor/
         self._node_id += 1
 
         node_name = dpg.get_value('node_name_combo')

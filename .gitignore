@@ -3,3 +3,4 @@ output
 repos
 test_imgs/
 test_clips/
+vid2vid_examples/

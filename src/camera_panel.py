@@ -3,7 +3,7 @@ import dearpygui.dearpygui as dpg
 from loguru import logger
 
 from context import Context
-from render_panel import update_render_view
+from render_panel import update_render_view, ImageWrapper
 from utils import clear_pointcloud
 
 
@@ -50,9 +50,24 @@ def upscale_callback(sender, __):
     Context.upscale = dpg.get_value(sender)
     logger.debug(f'Update upscale value to {Context.upscale}')
 
+def set_resized_image(image):
+    h, w = image.shape[:2]
+    logger.info(f'Initial image size is {w}x{h}px')
+    
+    Context.image_height = h #* Context.upscale // Context.downscale
+    Context.image_width = w #* Context.upscale // Context.downscale
+    Context.init_image = image
+    
+    Context.image_wrapper = ImageWrapper(image)
+    Context.view_panel.set_size(w, h)
+    
+    update_render_view()
+
 class CameraPanelWidget:
     
     def __init__(self) -> None:
+        self.up, self.down, self.left, self.right = 0, 0, 0, 0
+        
         with dpg.group(label="Camera"):
         # with dpg.collapsing_header(label="Camera", default_open=True):
             dpg.add_button(label="Init Image Selector", callback=lambda: dpg.show_item("file_dialog_id"))
@@ -117,11 +132,33 @@ class CameraPanelWidget:
             dpg.add_text("Pad & Crop")
             dpg.add_text("Up, Down, Left, Right")
             with dpg.group(horizontal=True):
-                dpg.add_input_intx()
-                dpg.add_button(label='Apply')
+                dpg.add_input_intx(callback=self.set_padcrop_vals)
+                dpg.add_button(label='Crop', callback=self.crop_image_callback)
+                dpg.add_button(label='Pad', callback=self.pad_image_callback)
                 # dpg.add_input_intx(label='Left, Right')
         
         dpg.add_separator()
+        
+    def set_padcrop_vals(self, sender, data):
+        logger.debug(f'InputX data is {data}')
+        self.up, self.down, self.left, self.right = data
+        
+    def crop_image_callback(self, sender):
+        logger.info('Crop image button was pressed')
+        image = Context.init_image
+        
+        logger.debug(f'Resize image from image size {image.shape[1]}x{image.shape[0]}')
+        
+        f = lambda x: x if x != 0 else None
+        
+        cropped_image = image[f(self.up) : f(-self.down), f(self.left) : f(-self.right)]
+        
+        logger.debug(f'Image resized to image size {cropped_image.shape[1]}x{cropped_image.shape[0]}')
+        
+        set_resized_image(cropped_image)
+        
+    def pad_image_callback(self, sender):
+        logger.info('Pad image button was pressed')
 
     def use_depth_checker(self, sender):
         val = dpg.get_value(sender)
