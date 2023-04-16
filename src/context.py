@@ -103,3 +103,11 @@ class Context:
     
     # Animation settings
     revers_mode = False
+    
+    # Mask settings
+    kernel_erode = 3
+    iters_erode = 1
+    kernel_dilate = 3
+    iters_dilate = 1
+    smooth_size = 3
+    smooth_sigma = 0.0

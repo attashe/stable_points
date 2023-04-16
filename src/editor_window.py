@@ -210,7 +210,7 @@ def main():
                     
                     Context.depth_panel = DepthPanel()
                     
-                    sd_widget = InpaintPanelWidget()
+                    Context.inpaint_panel = InpaintPanelWidget()
                         
                     dpg.add_separator()
                     
@@ -238,6 +238,7 @@ def main():
                     
                     dpg.add_separator()
                     
+                    Context.restart_function = restart_render
                     Context.scenario_panel = ScenarioPanel()
                     
                     dpg.add_separator()

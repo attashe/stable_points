@@ -126,7 +126,7 @@ class InpaintPanelWidget:
             img_pil = Image.fromarray(Context.inpainted_image)
         else:
             img_pil = Image.fromarray(Context.rendered_image)
-                
+
         # unit1 = webuiapi.ControlNetUnit(input_image=img_pil, module='canny', model='control_canny-fp16 [e3fe7712]')
         unit2 = webuiapi.ControlNetUnit(input_image=img_pil, module='depth', model='control_depth-fp16 [400750f6]', weight=1.0)
         controlnets = [unit2,] if Context.use_controlnet else []
@@ -180,7 +180,7 @@ class InpaintPanelWidget:
             cfg_scale=scale,
             eta=1.0,
             denoising_strength=1.0,
-            sampler_name='DDIM',
+            sampler_name='Euler a',
         )
 
         res = np.array(inpainting_result.image)
@@ -188,7 +188,7 @@ class InpaintPanelWidget:
         
         Context.view_panel.update(inpaint=Context.inpainted_image)
     
-    def inpaint_callback(self, sender, app_data):
+    def inpaint_callback(self):
         if Context.use_automatic_api:
             self.automatic_inference()
             return
@@ -243,7 +243,7 @@ class InpaintPanelWidget:
             image_index = 0
             for y, h, row in grid_image.tiles:
                 for tiledata in row:
-                    tiledata[2] = work_results[image_index] if image_index < len(work_results) else Image.new("RGB", (p.width, p.height))
+                    tiledata[2] = work_results[image_index] if image_index < len(work_results) else Image.new("RGB", (Context.tile_size, Context.tile_size))
                     image_index += 1
 
             combined_image = combine_grid(grid_image)

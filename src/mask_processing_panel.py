@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from context import Context
 from utils import show_info
 from render_panel import update_render_view
-from mask_processing import erode_mask, dilate_mask, close_small_holes, maxpool2d_closing
+from mask_processing import erode_mask, dilate_mask, close_small_holes, maxpool2d_closing, smooth_mask
 
 
 def refine_render():
@@ -96,6 +96,32 @@ def depthmap_checker(sender):
     # update_render_view()
     update_depth_mask()
 
+def kernel_erode_input_callback(sender):
+    val = dpg.get_value(sender)
+    logger.debug(f'Erode kernel try set to {val}')
+    if val % 2 == 0:
+        dpg.set_value(sender, val - 1)
+        return
+    Context.kernel_erode = val
+
+def iters_erode_input_callback(sender):
+    val = dpg.get_value(sender)
+    logger.debug(f'Erode iterations set to {val}')
+    Context.iters_erode = val
+
+def kernel_dilate_input_callback(sender):
+    val = dpg.get_value(sender)
+    logger.debug(f'Dilate kernel try set to {val}')
+    if val % 2 == 0:
+        dpg.set_value(sender, val - 1)
+        return
+    Context.kernel_dilate = val
+
+def iters_dilate_input_callback(sender):
+    val = dpg.get_value(sender)
+    logger.debug(f'Dilate iterations set to {val}')
+    Context.iters_dilate = val
+
 
 class MaskPanel:
     
@@ -103,35 +129,20 @@ class MaskPanel:
         with dpg.collapsing_header(label="Mask edit"):
             dpg.add_checkbox(label='Use depthmap instead mask', callback=depthmap_checker, default_value=False)
             
-            kernel_slider_erode = dpg.add_slider_int(label="kernel", default_value=3, min_value=1, max_value=31)
-            iterations_cnt_erode = dpg.add_slider_int(label="iterations", default_value=1, min_value=1, max_value=5)
-            
-            def erode_mask_callback(sender, app_data):
-                kernel = dpg.get_value(kernel_slider_erode)
-                # assert kernel % 2 == 1, "Kernel size must be odd"
-                if kernel % 2 == 0:
-                    show_info("Error", "Kernel size must be odd")
-                    return
-
-                Context.mask = erode_mask(Context.mask, kernel, iterations)
-                Context.rendered_depth = erode_mask(Context.rendered_depth, kernel, iterations)
-                iterations = dpg.get_value(iterations_cnt_erode)
-                if Context.use_depthmap_instead_mask:
-                    depth_img = Context.image_wrapper.depth2img(Context.rendered_depth)
-                    Context.view_panel.update(mask=depth_img)
-                else:
-                    mask_img = Context.image_wrapper.mask2img(Context.mask)
-                    Context.view_panel.update(mask=mask_img)
+            self.kernel_slider_erode = dpg.add_slider_int(label="kernel", default_value=Context.kernel_erode, min_value=1, max_value=31,
+                                                     callback=kernel_erode_input_callback)
+            self.iterations_cnt_erode = dpg.add_slider_int(label="iterations", default_value=Context.iters_erode, min_value=1, max_value=5,
+                                                      callback=iters_erode_input_callback)
                 
-                # np.copyto(Context.mask_data[..., 0], Context.mask.astype(np.float32) / 255)
-                
-            dpg.add_button(label="Erode", callback=erode_mask_callback)
+            dpg.add_button(label="Erode", callback=self.erode_mask_callback)
             
             dpg.add_separator()
             
             # Dilate
-            kernel_slider_dilate = dpg.add_slider_int(label="kernel", default_value=3, min_value=1, max_value=31)
-            iterations_cnt_dilate = dpg.add_slider_int(label="iterations", default_value=1, min_value=1, max_value=5)
+            kernel_slider_dilate = dpg.add_slider_int(label="kernel", default_value=Context.kernel_dilate, min_value=1, max_value=31,
+                                                      callback=kernel_dilate_input_callback)
+            iterations_cnt_dilate = dpg.add_slider_int(label="iterations", default_value=Context.iters_dilate, min_value=1, max_value=5,
+                                                       callback=iters_dilate_input_callback)
             
             def dilate_mask_callback(sender, app_data):
                 kernel = dpg.get_value(kernel_slider_dilate)
@@ -217,13 +228,10 @@ class MaskPanel:
             
             dpg.add_button(label='Max pulling', callback=max_pulling_callback)
             
-            def smooth_mask(mask, size, sigma) -> np.ndarray:
-                mask = mask.astype(np.uint8)
-                mask = cv2.GaussianBlur(mask, (size, size), sigma)
-                return mask
-            
-            size_slider = dpg.add_slider_int(label="size", default_value=3, min_value=1, max_value=31)
-            sigma_slider = dpg.add_slider_float(label="sigma", default_value=0.0, min_value=0.0, max_value=10.0)
+            size_slider = dpg.add_slider_int(label="size", default_value=Context.smooth_size, min_value=1, max_value=31,
+                                             callback=self.size_smooth_callback)
+            sigma_slider = dpg.add_slider_float(label="sigma", default_value=Context.smooth_sigma, min_value=0.0, max_value=10.0,
+                                                callback=self.sigma_smooth_callback)
             
             def smooth_mask_callback(sender, app_data):
                 Context.mask = smooth_mask(Context.mask, dpg.get_value(size_slider), dpg.get_value(sigma_slider))
@@ -243,7 +251,36 @@ class MaskPanel:
                 Context.view_panel.update(mask=mask_img)
             
             dpg.add_button(label='Reset mask', callback=reset_mask_callback)
-            
+
+    def size_smooth_callback(self, sender):
+        val = dpg.get_value(sender)
+        logger.debug(f'Smooth size set to {val}')
+        Context.smooth_size = val
+    
+    def sigma_smooth_callback(self, sender):
+        val = dpg.get_value(sender)
+        logger.debug(f'Smooth sigma set to {val}')
+        Context.smooth_sigma = val
+    
+    def erode_mask_callback(self):
+        kernel = Context.kernel_dilate
+        # assert kernel % 2 == 1, "Kernel size must be odd"
+        if kernel % 2 == 0:
+            show_info("Error", "Kernel size must be odd")
+            return
+        iterations = Context.iters_dilate
+
+        Context.mask = erode_mask(Context.mask, kernel, iterations)
+        Context.rendered_depth = erode_mask(Context.rendered_depth, kernel, iterations)
+        if Context.use_depthmap_instead_mask:
+            depth_img = Context.image_wrapper.depth2img(Context.rendered_depth)
+            Context.view_panel.update(mask=depth_img)
+        else:
+            mask_img = Context.image_wrapper.mask2img(Context.mask)
+            Context.view_panel.update(mask=mask_img)
+        
+        # np.copyto(Context.mask_data[..., 0], Context.mask.astype(np.float32) / 255)
+    
     def update_mask(self):
         # TODO: make special function for show depthmap and mask
         pass

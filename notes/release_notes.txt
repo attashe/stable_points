@@ -31,7 +31,9 @@
 --------------------------------------
 - add reverse animation option
 - tiling inpaint inference
-[] - add cropping image function
+- add cropping image function
+- add image padding
+BUG: inpainted area имеют красное смещение
 
 0.0.13 (planned), Video update
 --------------------------------------

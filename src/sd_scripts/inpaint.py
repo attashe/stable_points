@@ -132,9 +132,17 @@ def inpaint(sampler, image, mask, prompt, seed, scale, ddim_steps, num_samples=1
             result = result.cpu().numpy().transpose(0,2,3,1)
             result = result*255
 
-    result = [Image.fromarray(img.astype(np.uint8)) for img in result]
+    # img_inpainted = Image.fromarray(result[0].astype(np.uint8))
+    res = img_inpainted = result[0]
+    # mask = np.array(mask.convert("L"))
+    # mask = mask.astype(np.float32)/255.0
+    # mask = mask[..., None]
+    # image = np.array(image.convert("RGB")).astype(np.float32)
+    # res = image * (1 - mask) + img_inpainted * mask 
     
-    return result
+    torch.cuda.empty_cache()
+    
+    return [Image.fromarray(res.astype(np.uint8)),]
 
 def load_model(model_path, config_path):
     config = OmegaConf.load(config_path)

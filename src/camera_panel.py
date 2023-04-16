@@ -156,9 +156,23 @@ class CameraPanelWidget:
         logger.debug(f'Image resized to image size {cropped_image.shape[1]}x{cropped_image.shape[0]}')
         
         set_resized_image(cropped_image)
-        
+
     def pad_image_callback(self, sender):
         logger.info('Pad image button was pressed')
+        image: np.ndarray = Context.init_image
+        
+        logger.debug(f'Resize image from image size {image.shape[1]}x{image.shape[0]}')
+        
+        f = lambda x: x if x != 0 else None
+        
+        w, h = image.shape[1], image.shape[0]
+        new_w, new_h = w + self.left + self.right, h + self.up + self.down
+        padded_img = np.zeros((new_h, new_w, image.shape[2]), dtype=image.dtype)
+        padded_img[f(self.up) : f(-self.down), f(self.left) : f(-self.right)] = image
+        
+        logger.debug(f'Image resized to image size {padded_img.shape[1]}x{padded_img.shape[0]}')
+        
+        set_resized_image(padded_img)
 
     def use_depth_checker(self, sender):
         val = dpg.get_value(sender)

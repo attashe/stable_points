@@ -110,7 +110,7 @@ class ImageWrapper():
         points, colors = create_pointcloud(image)
         # substract (width / 2, height / 2) to make center of pointcloud in (0, 0) point
         points -= np.array([self.upscaled_image.shape[1] / 2, self.upscaled_image.shape[0] / 2, 0])
-        points += np.random.rand(*points.shape) * 0.00001
+        # points += np.random.rand(*points.shape) * 0.00001
         
         return points, colors
     
