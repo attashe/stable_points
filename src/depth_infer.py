@@ -38,8 +38,12 @@ class DepthModel():
 
     def load_midas(self, half_precision=True):
         self.midas_model = DPTDepthModel(
-            path=f"{self.model_path}/dpt_large-midas-2f21e586.pt",
-            backbone="vitl16_384",
+            # path=f"{self.model_path}/dpt_large-midas-2f21e586.pt",
+            # backbone="vitl16_384",
+            # path=f"{self.model_path}/dpt_swin2_large_384.pt",
+            # backbone="swin2l24_384",
+            path=f"{self.model_path}/dpt_beit_large_512.pt",
+            backbone="beitl16_512",
             non_negative=True,
         )
         self.normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
@@ -266,3 +270,21 @@ class LeResInfer:
     
     def predict_points(self, image):
         raise Exception('Not implemented error')
+    
+    
+class ZoeInfer:
+    
+    def __init__(self) -> None:
+        model_zoe_n = torch.hub.load("isl-org/ZoeDepth", "ZoeD_N", pretrained=False)
+        model_zoe_n.load_state_dict(torch.load('J:/GitHub/ZoeDepth/ZoeD_M12_N.pt')['model'])
+        DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+        self.zoe = model_zoe_n.to(DEVICE)
+
+    
+    def predict(self, image, resolution=384):
+        # depth_numpy = self.zoe.infer_pil(image)  # as numpy
+        # depth_pil = self.zoe.infer_pil(image, output_type="pil")  # as 16-bit PIL Image
+
+        depth_tensor = self.zoe.infer_pil(image, output_type="tensor")  # as torch tensor
+        
+        return depth_tensor

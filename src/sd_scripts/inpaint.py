@@ -20,6 +20,8 @@ from .inpaint_invoke import Inpaint as InpaintInvoke
 from .inpaint_invoke import downsampling
 from .ddim import DDIMSampler as DDIMSamplerInvoke
 
+from utils import apply_color_correction, setup_color_correction
+
 
 def numpy_to_pil(images):
     """
@@ -78,14 +80,17 @@ def make_batch_sd(
             }
     return batch
 
-def inpaint(sampler, image, mask, prompt, seed, scale, ddim_steps, num_samples=1, w=512, h=512):
+def inpaint(sampler, image, mask, prompt, seed, scale, ddim_steps, num_samples=1, w=512, h=512,
+            masking=False, color_correction=False, start_shift=False):
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = sampler.model
     
     seed_everything(seed)
     prng = np.random.RandomState(seed)
     
-    start_code = prng.randn(num_samples, 4, h//8, w//8)
+    image_f = np.array(image.convert("RGB")).astype(np.float32)
+    image_mean = (image_f[image_f != 0]/127.5-1.0).mean() if start_shift else 0.0
+    start_code = prng.randn(num_samples, 4, h//8, w//8) + np.clip(image_mean, -0.1, 0.1)
     start_code = torch.from_numpy(start_code).to(device=device, dtype=torch.float32)
 
     with torch.no_grad():
@@ -134,15 +139,23 @@ def inpaint(sampler, image, mask, prompt, seed, scale, ddim_steps, num_samples=1
 
     # img_inpainted = Image.fromarray(result[0].astype(np.uint8))
     res = img_inpainted = result[0]
-    # mask = np.array(mask.convert("L"))
-    # mask = mask.astype(np.float32)/255.0
-    # mask = mask[..., None]
-    # image = np.array(image.convert("RGB")).astype(np.float32)
-    # res = image * (1 - mask) + img_inpainted * mask 
+    if masking:
+        
+        mask = np.array(mask.convert("L"))
+        mask = mask.astype(np.float32)/255.0
+        mask = mask[..., None]
+        image_f = np.array(image.convert("RGB")).astype(np.float32)
+        res = image_f * (1 - mask) + img_inpainted.astype(np.float32) * mask 
+    res = Image.fromarray(res.astype(np.uint8))
+    
+    if color_correction:
+        logger.info('Apply color correction')
+        correction = setup_color_correction(image)
+        res = apply_color_correction(correction, res).convert("RGB")
     
     torch.cuda.empty_cache()
     
-    return [Image.fromarray(res.astype(np.uint8)),]
+    return [res,]
 
 def load_model(model_path, config_path):
     config = OmegaConf.load(config_path)
@@ -161,8 +174,10 @@ class Inpainter:
         self.device = device
         self.model = self.model.to(device)
         
-    def inpaint(self, image, mask, prompt, seed, scale, ddim_steps, num_samples=1, w=512, h=512):
-        return inpaint(self.sampler, image, mask, prompt, seed, scale, ddim_steps, num_samples, w, h)
+    def inpaint(self, image, mask, prompt, seed, scale, ddim_steps, num_samples=1, w=512, h=512,
+                masking=False, color_correction=False, start_shift=False):
+        return inpaint(self.sampler, image, mask, prompt, seed, scale, ddim_steps, num_samples, w, h,
+                       masking, color_correction, start_shift)
 
 
 def make_batch(image, mask, device):

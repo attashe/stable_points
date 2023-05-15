@@ -15,6 +15,12 @@ from utils import show_info, split_grid, combine_grid
 class InpaintPanelWidget:
 
     def __init__(self) -> None:
+        self.color_corrention = False
+        self.strict_mask = False
+        self.start_shift = False
+        self.sampler_name = 'Euler a'
+        self.inpaint_fill = 0
+        
         # with dpg.group(label='Stable Diffusion'):
         with dpg.collapsing_header(label="Stable Diffusion"):
             with dpg.theme() as self.button_yellow:
@@ -34,6 +40,13 @@ class InpaintPanelWidget:
                 dpg.add_button(label='Load Model', tag='load_model_button_tag', callback=self.load_model_callback)
                 self.color_button = dpg.add_button(label='   ')
                 dpg.bind_item_theme(self.color_button, self.button_yellow)
+                
+            dpg.add_checkbox(label='color correction', default_value=self.color_corrention,
+                             callback=self.color_correction_callback)
+            dpg.add_checkbox(label='strict mask', default_value=self.strict_mask,
+                             callback=self.strict_mask_callback)
+            dpg.add_checkbox(label='Start code shift', default_value=self.start_shift,
+                             callback=self.start_shift_callback)
 
             dpg.add_checkbox(label='tiling inpaint', default_value=Context.tiling_inpaint,
                              callback=self.tiling_callback)
@@ -69,6 +82,16 @@ class InpaintPanelWidget:
             dpg.add_slider_float(label='denoising', tag='denoising_strength_slider',
                                  default_value=0.7, min_value=0, max_value=1, format='%.2f')
             dpg.add_button(label='Run Img2Img model', tag='img2img_button', callback=self.img2img_api)
+            
+            dpg.add_slider_int(label='inpaint fill', default_value=self.inpaint_fill, min_value=0, max_value=3,
+                              callback=self.inpaint_fill_callback)
+            
+            dpg.add_combo(
+                    ['DDIM', 'Euler a'],
+                    default_value=self.sampler_name,
+                    tag='sampler_selector',
+                    callback=self.sampler_selector_callback,
+                )
 
     def init_api(self):
         dpg.bind_item_theme(self.color_button, self.button_yellow)
@@ -86,6 +109,26 @@ class InpaintPanelWidget:
     def tiling_callback(self, sender):
         val = dpg.get_value(sender)
         Context.tiling_inpaint = val
+    
+    def inpaint_fill_callback(self, sender):
+        val = dpg.get_value(sender)
+        self.inpaint_fill = val
+    
+    def color_correction_callback(self, sender):
+        val = dpg.get_value(sender)
+        self.color_corrention = val
+        
+    def strict_mask_callback(self, sender):
+        val = dpg.get_value(sender)
+        self.strict_mask = val
+        
+    def start_shift_callback(self, sender):
+        val = dpg.get_value(sender)
+        self.start_shift = val
+        
+    def sampler_selector_callback(self, sender):
+        val = dpg.get_value(sender)
+        self.sampler_name = val
         
     def tile_size_slider_callback(self, sender):
         val = dpg.get_value(sender)
@@ -163,6 +206,8 @@ class InpaintPanelWidget:
         negative_prompt = dpg.get_value('negative_prompt')
         ddim_steps = dpg.get_value('ddim_steps')
         scale = dpg.get_value('scale')
+        sampler = self.sampler_name
+        inpainting_fill = self.inpaint_fill
         
         # TODO: remove this assert
         assert Context.rendered_image.shape[0] == Context.image_height and Context.rendered_image.shape[1] == Context.image_width
@@ -170,7 +215,7 @@ class InpaintPanelWidget:
         inpainting_result = Context.api.img2img(
             images=[Image.fromarray(Context.rendered_image)],
             mask_image=Image.fromarray(Context.mask),
-            inpainting_fill=0,
+            inpainting_fill=inpainting_fill,
             width=Context.image_width,
             height=Context.image_height,
             prompt=prompt,
@@ -178,9 +223,10 @@ class InpaintPanelWidget:
             seed=seed,
             steps=ddim_steps,
             cfg_scale=scale,
+            mask_blur=8,
             eta=1.0,
             denoising_strength=1.0,
-            sampler_name='Euler a',
+            sampler_name=sampler,
         )
 
         res = np.array(inpainting_result.image)
@@ -250,7 +296,8 @@ class InpaintPanelWidget:
             res = np.array(combined_image)
         else:
             results = Context.inpainter.inpaint(Image.fromarray(image_resized), Image.fromarray(inpaint_mask),
-                        prompt, seed, scale, ddim_steps, num_samples, w=new_w, h=new_h)
+                        prompt, seed, scale, ddim_steps, num_samples, w=new_w, h=new_h,
+                        color_correction=self.color_corrention, masking=self.strict_mask, start_shift=self.start_shift)
             
             res = np.array(results[0])
 

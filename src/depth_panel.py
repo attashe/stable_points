@@ -10,7 +10,7 @@ from loguru import logger
 import numpy as np
 
 from context import Context
-from depth_infer import DepthModel, AdaBinsDepthPredict, LeResInfer
+from depth_infer import DepthModel, AdaBinsDepthPredict, LeResInfer, ZoeInfer
 from utils import dpg_get_value
 from render_panel import update_render_view
 
@@ -103,7 +103,7 @@ class DepthPanel:
             # TODO: unify all depth models to one API and remove duplicates for model types
             self.selector_tag = 'depth_model_selector'
             dpg.add_combo(
-                    ['midas', 'adabins', 'leres'],
+                    ['midas', 'adabins', 'leres', 'zoe_depth'],
                     default_value=Context.depth_type,
                     tag=self.selector_tag,
                     callback=self.load_model_callback
@@ -227,6 +227,9 @@ class DepthPanel:
         elif Context.depth_type == 'leres':
             Context.depth_model = LeResInfer()
             self.loaded_model = 'leres'
+        elif Context.depth_type == 'zoe_depth':
+            Context.depth_model = ZoeInfer()
+            self.loaded_model = 'zoe_depth'
         
         logger.info(f'Depth model loaded in {time.time() - start_time} seconds')
         dpg.bind_item_theme(self.color_button, self.button_green)
@@ -252,5 +255,10 @@ class DepthPanel:
         elif self.loaded_model == 'leres':
             pred, pred_ori = Context.depth_model.predict_depth(img, resolution=Context.depth_resolution)
             depth = pred_ori
+        elif self.loaded_model == 'zoe_depth':
+            logger.debug('Inference Zoe Depth model')
+            depth = Context.depth_model.predict(img, resolution=Context.depth_resolution)
+            depth = depth.cpu().numpy()
+            
             
         return depth

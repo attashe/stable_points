@@ -19,7 +19,7 @@
 - add vortex transform with noise parameters
 
 
-0.0.11 (planned), test scenario
+0.0.11, test scenario
 --------------------------------------
 - add versions plan
 - add chaos_fraction parameter for numpy vortex transform
@@ -27,17 +27,18 @@
 - add vortex pipeline for prove that idea working
 
 
-0.0.12 (planned), utility upadte
+0.0.12, utility upadte
 --------------------------------------
 - add reverse animation option
 - tiling inpaint inference
 - add cropping image function
 - add image padding
-BUG: inpainted area имеют красное смещение
+
 
 0.0.13 (planned), Video update
 --------------------------------------
 Video update:
+[x] - add new depth models - Zoe Depth, update MiDaS model
 [] - add video stylization window
 [] - load video
 [] - render video frame by frame
@@ -45,6 +46,8 @@ Video update:
 [] - img2img with controlnet
 [] - add Optical Flow Warp
 [] - deflickering
+[] - color correction for masked inpaint
+
 
 0.0.14 (planned), rotation&crop upadte
 --------------------------------------
@@ -53,6 +56,10 @@ Video update:
 [] - reorganize render and utilities code
     Так как после апскейла изображение будет другого размера, чем в текстуре для отображения
     То необходимо сделать разницу между выходным разрешением и хранимым
+
+BUGS:
+--------------------------------------
+BUG: inpainted area имеют красное смещение
 
 
 0.0.15 (planned), Scenarios update
@@ -66,6 +73,7 @@ Video update:
 [] - find another interpolation library
 [] - Node for selection background/foreground mask
 [] - Node for blending image with mask
+
 
 0.0.13 (planned), big nodes editor update
 --------------------------------------
@@ -93,6 +101,11 @@ Video update:
 
 --------------------------------------
 
+Addons:
+[] - instrument for delete background
+[] - brightness/contrast/clarity/exposure sliders for inpaint window
+
+--------------------------------------
 Примечания:
 
 Как реализовать NodeEditor:

@@ -12,7 +12,32 @@ from PIL import Image, ImageOps
 from sklearn.neighbors import KDTree
 from loguru import logger
 
+from skimage import exposure
+from blendmodes.blend import blendLayers, BlendType
+
 from context import Context
+
+
+def setup_color_correction(image):
+    logger.info("Calibrating color correction.")
+    correction_target = cv2.cvtColor(np.asarray(image.copy()), cv2.COLOR_RGB2LAB)
+    return correction_target
+
+
+def apply_color_correction(correction, original_image):
+    logger.info("Applying color correction.")
+    image = Image.fromarray(cv2.cvtColor(exposure.match_histograms(
+        cv2.cvtColor(
+            np.asarray(original_image),
+            cv2.COLOR_RGB2LAB
+        ),
+        correction,
+        channel_axis=2
+    ), cv2.COLOR_LAB2RGB).astype("uint8"))
+
+    image = blendLayers(image, original_image, BlendType.LUMINOSITY)
+
+    return image
 
 
 def clear_pointcloud(points, threshold, radius):

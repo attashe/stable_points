@@ -235,9 +235,11 @@ def make_interpolation(sender):
     global model
     if model is None:
         model = FrameInterpolationModel('J:/Weights/FILM-pytorch/film_net_fp16.pt')
-        
-    # folder = dpg.get_value('interp_text_input_tag')
-    folder = os.path.join(Context.log_folder, "render")
+    
+    if __name__ == "__main__":
+        folder = dpg.get_value('interp_text_input_tag')
+    else:
+        folder = os.path.join(Context.log_folder, "render")
     inter_frames = dpg.get_value('inter_frames_input')
     
     imgs = [img for img in os.listdir(folder) if img.startswith('render')]
