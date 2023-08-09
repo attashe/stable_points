@@ -34,6 +34,7 @@ class Context:
     fill = 'default'
     use_inpaint_model = True
     use_automatic_api = False
+    use_asymmetric_vqgan = False
     use_controlnet = False
     api = None
     api_model_name = 'sd-v1-5-inpainting'

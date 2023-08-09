@@ -43,7 +43,8 @@ Video update:
 [] - load video
 [] - render video frame by frame
 [] - add frame skip options - make this for better perfomance
-[] - img2img with controlnet
+[x] - img2img with controlnet
+  [] - add controlnet v1.1
 [] - add Optical Flow Warp
 [] - deflickering
 [] - color correction for masked inpaint
@@ -97,13 +98,15 @@ BUG: inpainted area имеют красное смещение
 [] - add links to articles and sources
 [] - add INSTALL.md instructions
 [] - fix some TODOs
-
+[] - Improve outpaint quality with this repo:
+    https://github.com/v8hid/infinite-zoom-automatic1111-webui
 
 --------------------------------------
 
 Addons:
 [] - instrument for delete background
 [] - brightness/contrast/clarity/exposure sliders for inpaint window
+[] - separate server for neural network inference
 
 --------------------------------------
 Примечания:
@@ -120,6 +123,10 @@ Known bugs:
 При img2img with automatic api изображений с отличными от кратных 2 измерениями возникает несовместимость
 размеров с рендером из-за различия в округлении. Ошибка возникает уже после выполнения операции при попытке
 обновить окно отображения
+
+--------------------------------------
+
+Унификация API в разных частях программы
 
 Traceback (most recent call last):
   File "E:\GitHub\stable_points\src\inpaint_panel.py", line 155, in img2img_api

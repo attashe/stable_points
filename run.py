@@ -7,6 +7,8 @@ from subprocess import call
 
 # call(['python', './src/editor_window.py'])
 
-call(['python', './src/frames_panel.py'])
+# call(['python', './src/frames_panel.py'])
 
 # call(['python', './src/video_panel.py'])
+
+call(['python', './src/nodes_test.py'])

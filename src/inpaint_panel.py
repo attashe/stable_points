@@ -1,3 +1,6 @@
+import json
+import requests
+
 import dearpygui.dearpygui as dpg
 from loguru import logger
 
@@ -33,7 +36,10 @@ class InpaintPanelWidget:
                     dpg.add_theme_color(dpg.mvThemeCol_Button, (20, 150, 20), category=dpg.mvThemeCat_Core)
                     dpg.add_theme_color(dpg.mvThemeCol_ButtonHovered, (20, 220, 20), category=dpg.mvThemeCat_Core)
 
-            dpg.add_checkbox(label='Use automatic1111 API', callback=self.automatic_checker, default_value=Context.use_automatic_api)
+            dpg.add_checkbox(label='Use automatic1111 API',
+                             callback=self.automatic_checker, default_value=Context.use_automatic_api)
+            dpg.add_checkbox(label='Use asymmetric VQGAN',
+                             callback=self.asymmetric_vqgan_checker, default_value=Context.use_asymmetric_vqgan)
 
             with dpg.group(horizontal=True):
             # Add inpainting button
@@ -234,9 +240,102 @@ class InpaintPanelWidget:
         
         Context.view_panel.update(inpaint=Context.inpainted_image)
     
+    def _call_asymmetric_vqgan(self, image, mask, prompt, seed, scale, steps, w, h):
+        _, res = cv2.imencode('.png', np.array(image))
+        image_b = res.tobytes()
+        _, res = cv2.imencode('.png', np.array(mask))
+        mask_b = res.tobytes()
+        
+        url = 'http://127.0.0.1:5005/post_img2img'
+
+        data_json = {
+            'prompt': prompt,
+            'negative_prompt': '',
+            'count': 1,
+            'seed': seed,
+            'width': w,
+            'height': h,
+            'steps': steps,
+            'cfg_scale': scale
+        }
+
+        files = {
+            'image': image_b,
+            'mask': mask_b,
+            'json': json.dumps(data_json)
+        }
+
+        # headers = {'Content-type': 'multipart/form-data'}
+        
+        response = requests.post(url, files=files)
+        
+        image = np.asarray(bytearray(response.content), dtype="uint8")
+        res = cv2.imdecode(image, cv2.IMREAD_COLOR)
+        if res.shape[0] != h or res.shape[1] != w:
+            res = cv2.resize(res, (w, h), interpolation=cv2.INTER_LANCZOS4)
+        
+        return Image.fromarray(res)
+    
+    def asymmetric_vqgan_inference(self):
+        # TODO: remove this assert
+        assert Context.rendered_image.shape[0] == Context.image_height and Context.rendered_image.shape[1] == Context.image_width
+        
+        seed = dpg.get_value('seed')
+        prompt = dpg.get_value('prompt')
+        negative_prompt = dpg.get_value('negative_prompt')
+        ddim_steps = dpg.get_value('ddim_steps')
+        scale = dpg.get_value('scale')
+        sampler = self.sampler_name
+        inpainting_fill = self.inpaint_fill
+        
+        w, h = Context.image_width, Context.image_height
+        # w, h = w // 2, h // 2  # Inpainting is slow and needs too much GPU, so we downscale the image
+        new_w, new_h = w - w % 64, h - h % 64
+        inpaint_mask = cv2.resize(Context.mask, (new_w, new_h), interpolation=cv2.INTER_NEAREST)
+        image_resized = cv2.resize(Context.rendered_image, (new_w, new_h), interpolation=cv2.INTER_LANCZOS4)
+        
+        # TODO: Finish it
+        if Context.tiling_inpaint:
+            image_resized = Image.fromarray(image_resized)
+            inpaint_mask = Image.fromarray(inpaint_mask)
+            
+            grid_image = split_grid(image_resized, tile_w=Context.tile_size,
+                                    tile_h=Context.tile_size, overlap=Context.tile_overlap)
+            
+            grid_mask = split_grid(inpaint_mask, tile_w=Context.tile_size,
+                                   tile_h=Context.tile_size, overlap=Context.tile_overlap)
+            
+            work_results = []
+            for (y, h, row_img), (y1, h1, row_mask) in zip(grid_image.tiles, grid_mask.tiles):
+                for tiledata_img, tiledata_mask in zip(row_img, row_mask):
+                    # work.append(tiledata_img[2], tiledata_mask[2])
+                    result = self._call_asymmetric_vqgan(
+                        tiledata_img[2], tiledata_mask[2],
+                        prompt, seed, scale, ddim_steps,
+                        w=Context.tile_size, h=Context.tile_size)
+                    
+                    work_results.append(result)
+            
+            image_index = 0
+            for y, h, row in grid_image.tiles:
+                for tiledata in row:
+                    tiledata[2] = work_results[image_index] if image_index < len(work_results) else Image.new("RGB", (Context.tile_size, Context.tile_size))
+                    image_index += 1
+
+            combined_image = combine_grid(grid_image)
+            res = np.array(combined_image)
+        
+        res = cv2.resize(res, (Context.image_width, Context.image_height), interpolation=cv2.INTER_LANCZOS4)
+        Context.inpainted_image = res
+        Context.view_panel.update(inpaint=Context.inpainted_image)
+    
     def inpaint_callback(self):
         if Context.use_automatic_api:
             self.automatic_inference()
+            return
+        
+        if Context.use_asymmetric_vqgan:
+            self.asymmetric_vqgan_inference()
             return
         
         if Context.inpainter is None:
@@ -331,6 +430,14 @@ class InpaintPanelWidget:
             Context.use_automatic_api = True
         else:
             Context.use_automatic_api = False
+            
+    def asymmetric_vqgan_checker(self, sender):
+        val = dpg.get_value(sender)
+        logger.debug(f'Set depthmap checker to {val}')
+        if val:
+            Context.use_asymmetric_vqgan = True
+        else:
+            Context.use_asymmetric_vqgan = False
             
     def controlnet_checker(self, sender):
         val = dpg.get_value(sender)
